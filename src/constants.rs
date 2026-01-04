@@ -17,9 +17,12 @@ pub const TILE_TOP_INSET: f32 = 0.0;
 pub const PANEL_DEPTH: f32 = 10.0;
 
 // Sprite alignment
-pub const FIGHTER_ANCHOR: Vec2 = Vec2::new(0.0, -0.36);
+// Anchor is relative to sprite center: -0.5 = bottom, 0 = center, 0.5 = top
+// The fighter sprite has some padding at the bottom, so we adjust slightly
+pub const FIGHTER_ANCHOR: Vec2 = Vec2::new(0.0, -0.25);
 
-// Entity offsets
+// Entity offsets (relative to tile floor point)
+// Negative Y moves the character down so feet align with panel bottom
 pub const CHARACTER_OFFSET: Vec2 = Vec2::new(0.0, 0.0);
 
 // Bullets
@@ -31,7 +34,8 @@ pub const BULLET_DRAW_SIZE: Vec2 = Vec2::new(12.0, 12.0);
 pub const MUZZLE_OFFSET: Vec2 = Vec2::new(86.0, 70.0);
 
 // Fighter rendering
-pub const FIGHTER_DRAW_SIZE: Vec2 = Vec2::new(180.0, 180.0);
+// Scale to be roughly 2 panels tall (like in MMBN)
+pub const FIGHTER_DRAW_SIZE: Vec2 = Vec2::new(220.0, 220.0);
 
 // Z layers
 pub const Z_BACKGROUND: f32 = -10.0;
