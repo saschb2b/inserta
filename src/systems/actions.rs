@@ -301,13 +301,13 @@ pub fn widesword_hit_enemy(
                     }
                 }
 
-                // Flash feedback
-                commands
-                    .entity(enemy_entity)
-                    .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
-
                 if health.current <= 0 {
                     commands.entity(enemy_entity).despawn();
+                } else {
+                    // Flash feedback only if still alive
+                    commands
+                        .entity(enemy_entity)
+                        .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
                 }
             }
         }
@@ -351,13 +351,13 @@ pub fn charged_shot_hit_enemy(
                     }
                 }
 
-                // Flash feedback
-                commands
-                    .entity(enemy_entity)
-                    .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
-
                 if health.current <= 0 {
                     commands.entity(enemy_entity).despawn();
+                } else {
+                    // Flash feedback only if still alive
+                    commands
+                        .entity(enemy_entity)
+                        .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
                 }
             }
         }

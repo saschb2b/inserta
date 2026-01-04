@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::components::*;
+use crate::components::{
+    BaseColor, Bullet, ChargedShot, Enemy, EnemyBullet, FlashTimer, GridPosition, Health,
+    HealthText, Lifetime, MoveTimer, MuzzleFlash, Player, PlayerHealthText, TilePanel,
+};
 use crate::constants::*;
 
 /// Player bullets move right
@@ -56,7 +59,10 @@ pub fn muzzle_lifetime(
 /// Player bullets hit enemies
 pub fn bullet_hit_enemy(
     mut commands: Commands,
-    bullet_query: Query<(Entity, &GridPosition), (With<Bullet>, Without<EnemyBullet>)>,
+    bullet_query: Query<
+        (Entity, &GridPosition),
+        (With<Bullet>, Without<EnemyBullet>, Without<ChargedShot>),
+    >,
     mut enemy_query: Query<(Entity, &GridPosition, &mut Health, &Children), With<Enemy>>,
     mut text_query: Query<&mut Text2d, With<HealthText>>,
 ) {
@@ -69,17 +75,18 @@ pub fn bullet_hit_enemy(
                 // Update HP text children (shadow + main)
                 for child in children.iter() {
                     if let Ok(mut text) = text_query.get_mut(child) {
-                        text.0 = health.current.to_string();
+                        text.0 = health.current.max(0).to_string();
                     }
                 }
 
-                // Flash feedback
-                commands
-                    .entity(enemy_entity)
-                    .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
-
                 if health.current <= 0 {
+                    // Despawn enemy and all children (despawn is recursive in Bevy 0.17+)
                     commands.entity(enemy_entity).despawn();
+                } else {
+                    // Flash feedback only if still alive
+                    commands
+                        .entity(enemy_entity)
+                        .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
                 }
             }
         }
@@ -104,14 +111,14 @@ pub fn enemy_bullet_hit_player(
                     text.0 = format!("HP: {}", health.current.max(0));
                 }
 
-                // Flash feedback
-                commands
-                    .entity(player_entity)
-                    .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
-
                 if health.current <= 0 {
                     // Player defeated - could trigger game over
                     commands.entity(player_entity).despawn();
+                } else {
+                    // Flash feedback only if still alive
+                    commands
+                        .entity(player_entity)
+                        .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
                 }
             }
         }
