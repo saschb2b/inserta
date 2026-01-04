@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::sprite::MeshMaterial2d;
 
 use crate::components::*;
 use crate::constants::*;
@@ -15,7 +14,7 @@ pub fn bullet_movement(
 ) {
     for (entity, mut pos, mut timer) in &mut query {
         timer.0.tick(time.delta());
-        if timer.0.finished() {
+        if timer.0.is_finished() {
             pos.x += 1;
             if pos.x >= GRID_WIDTH {
                 commands.entity(entity).despawn();
@@ -32,7 +31,7 @@ pub fn enemy_bullet_movement(
 ) {
     for (entity, mut pos, mut timer) in &mut query {
         timer.0.tick(time.delta());
-        if timer.0.finished() {
+        if timer.0.is_finished() {
             pos.x -= 1;
             if pos.x < 0 {
                 commands.entity(entity).despawn();
@@ -48,7 +47,7 @@ pub fn muzzle_lifetime(
 ) {
     for (entity, mut lifetime) in &mut query {
         lifetime.0.tick(time.delta());
-        if lifetime.0.finished() {
+        if lifetime.0.is_finished() {
             commands.entity(entity).despawn();
         }
     }
@@ -128,7 +127,7 @@ pub fn entity_flash(
     for (entity, mut sprite, base, mut flash) in &mut query {
         flash.0.tick(time.delta());
 
-        if flash.0.finished() {
+        if flash.0.is_finished() {
             sprite.color = base.0;
             commands.entity(entity).remove::<FlashTimer>();
         } else {

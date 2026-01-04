@@ -1,8 +1,9 @@
+use bevy::asset::RenderAssetUsages;
 use bevy::audio::{AudioPlayer, AudioSource, PlaybackSettings, Volume};
+use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology};
-use bevy::render::render_asset::RenderAssetUsages;
-use bevy::sprite::{Anchor, MeshMaterial2d};
+use bevy::sprite::Anchor;
+use bevy::text::Justify;
 
 use crate::assets::{FighterSprites, SlimeSprites};
 use crate::components::*;
@@ -367,10 +368,10 @@ pub fn setup(
             image: fighter_idle,
             texture_atlas: Some(fighter_layout.into()),
             color: Color::WHITE,
-            anchor: Anchor::Custom(FIGHTER_ANCHOR),
             custom_size: Some(FIGHTER_DRAW_SIZE),
             ..default()
         },
+        Anchor(FIGHTER_ANCHOR),
         Transform::default(),
         GridPosition { x: 1, y: 1 },
         RenderConfig {
@@ -393,7 +394,7 @@ pub fn setup(
     // Player HP display (top-left corner)
     commands.spawn((
         Text2d::new("HP: 100"),
-        TextLayout::new_with_justify(JustifyText::Left),
+        TextLayout::new_with_justify(Justify::Left),
         TextColor(COLOR_TEXT),
         Transform::from_xyz(-350.0, 260.0, Z_UI),
         PlayerHealthText,
@@ -445,11 +446,11 @@ pub fn setup(
                 image: slime_idle,
                 texture_atlas: Some(slime_idle_layout.into()),
                 color: Color::WHITE,
-                anchor: Anchor::Custom(SLIME_ANCHOR),
                 custom_size: Some(SLIME_DRAW_SIZE),
                 flip_x: true, // Mirror to face left (toward player)
                 ..default()
             },
+            Anchor(SLIME_ANCHOR),
             Transform::default(),
             GridPosition { x: 4, y: 1 },
             RenderConfig {
@@ -486,7 +487,7 @@ pub fn setup(
 
         parent.spawn((
             Text2d::new("100"),
-            TextLayout::new_with_justify(JustifyText::Center),
+            TextLayout::new_with_justify(Justify::Center),
             TextColor(COLOR_TEXT_SHADOW),
             Transform::from_xyz(1.5, 48.5, 0.1),
             HealthText,
@@ -494,7 +495,7 @@ pub fn setup(
 
         parent.spawn((
             Text2d::new("100"),
-            TextLayout::new_with_justify(JustifyText::Center),
+            TextLayout::new_with_justify(Justify::Center),
             TextColor(COLOR_TEXT),
             Transform::from_xyz(0.0, 50.0, 0.2),
             HealthText,

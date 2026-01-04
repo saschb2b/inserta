@@ -72,7 +72,7 @@ pub fn animate_player(
         }
 
         anim.timer.tick(time.delta());
-        if anim.timer.finished() {
+        if anim.timer.is_finished() {
             let frame_count = frames_for_state(&sprites, anim.state);
             anim.frame = (anim.frame + 1) % frame_count;
             if let Some(atlas) = sprite.texture_atlas.as_mut() {
@@ -149,7 +149,7 @@ pub fn animate_slime(
         }
 
         anim.timer.tick(time.delta());
-        if anim.timer.finished() {
+        if anim.timer.is_finished() {
             let frame_count = slime_frames_for_state(&sprites, anim.state);
             anim.frame = (anim.frame + 1) % frame_count;
             if let Some(atlas) = sprite.texture_atlas.as_mut() {

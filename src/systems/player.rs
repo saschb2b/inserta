@@ -11,7 +11,7 @@ pub fn move_player(
 ) {
     cooldown.0.tick(time.delta());
 
-    if !cooldown.0.finished() {
+    if !cooldown.0.is_finished() {
         return;
     }
 
@@ -55,7 +55,7 @@ pub fn player_shoot(
 ) {
     cooldown.0.tick(time.delta());
 
-    if !cooldown.0.finished() {
+    if !cooldown.0.is_finished() {
         return;
     }
 

@@ -14,7 +14,7 @@ pub fn enemy_movement(
     for (mut pos, mut ai) in &mut query {
         ai.move_timer.tick(time.delta());
 
-        if ai.move_timer.finished() {
+        if ai.move_timer.is_finished() {
             // Random direction: 0=up, 1=down, 2=left, 3=right, 4+=stay
             let direction = rng.random_range(0..6);
 
@@ -48,7 +48,7 @@ pub fn enemy_shoot(
     for (pos, mut ai) in &mut query {
         ai.shoot_timer.tick(time.delta());
 
-        if ai.shoot_timer.finished() {
+        if ai.shoot_timer.is_finished() {
             // Spawn enemy bullet traveling left
             commands.spawn((
                 Sprite {
