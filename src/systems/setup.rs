@@ -158,7 +158,7 @@ pub fn setup(
     commands.spawn((
         Sprite {
             color: COLOR_BACKGROUND,
-            custom_size: Some(Vec2::new(2000.0, 1200.0)),
+            custom_size: Some(Vec2::new(SCREEN_WIDTH + 200.0, SCREEN_HEIGHT + 200.0)),
             ..default()
         },
         Transform::from_xyz(0.0, 0.0, Z_BACKGROUND),
@@ -167,13 +167,14 @@ pub fn setup(
     // ========================================================================
     // Cyber grid lines in background
     // ========================================================================
-    let grid_line_h_mesh = meshes.add(Rectangle::new(900.0, 1.5));
-    let grid_line_v_mesh = meshes.add(Rectangle::new(1.5, 600.0));
+    let grid_line_h_mesh = meshes.add(Rectangle::new(SCREEN_WIDTH + 100.0, 1.5));
+    let grid_line_v_mesh = meshes.add(Rectangle::new(1.5, SCREEN_HEIGHT + 100.0));
     let grid_line_mat = materials.add(ColorMaterial::from(COLOR_GRID_LINE));
     let grid_line_bright_mat = materials.add(ColorMaterial::from(COLOR_GRID_LINE_BRIGHT));
 
-    for i in -10..=10 {
-        let y = i as f32 * 35.0;
+    // Horizontal lines - spaced to cover screen
+    for i in -12..=12 {
+        let y = i as f32 * 40.0 + ARENA_Y_OFFSET;
         let mat = if i % 3 == 0 {
             grid_line_bright_mat.clone()
         } else {
@@ -186,8 +187,9 @@ pub fn setup(
         ));
     }
 
-    for i in -12..=12 {
-        let x = i as f32 * 45.0;
+    // Vertical lines - spaced to cover screen
+    for i in -16..=16 {
+        let x = i as f32 * 50.0;
         let mat = if i % 3 == 0 {
             grid_line_bright_mat.clone()
         } else {
@@ -196,7 +198,7 @@ pub fn setup(
         commands.spawn((
             Mesh2d(grid_line_v_mesh.clone()),
             MeshMaterial2d(mat),
-            Transform::from_xyz(x, 0.0, Z_GRID_LINES),
+            Transform::from_xyz(x, ARENA_Y_OFFSET, Z_GRID_LINES),
         ));
     }
 
@@ -213,13 +215,13 @@ pub fn setup(
     // MMBN-style Panel Components
     // ========================================================================
 
-    // Panel dimensions
+    // Panel dimensions (scaled for 1280x800)
     let panel_w = TILE_W;
     let panel_h = TILE_H;
-    let frame_thickness = 6.0;
+    let frame_thickness = 10.0;
     let inner_w = panel_w - frame_thickness * 2.0;
     let inner_h = panel_h - frame_thickness * 2.0;
-    let corner_radius = 8.0;
+    let corner_radius = 12.0;
 
     // Meshes
     let outer_frame_mesh = meshes.add(rounded_rect_mesh(panel_w, panel_h, corner_radius));
@@ -235,7 +237,7 @@ pub fn setup(
         inner_h - 4.0,
         corner_radius * 0.5,
     ));
-    let highlight_mesh = meshes.add(rect_mesh(inner_w - 12.0, 6.0));
+    let highlight_mesh = meshes.add(rect_mesh(inner_w - 20.0, 8.0));
     let front_face_mesh = meshes.add(rect_mesh(panel_w, PANEL_DEPTH));
 
     // ========================================================================
@@ -328,7 +330,7 @@ pub fn setup(
                 MeshMaterial2d(highlight_mat.clone()),
                 Transform::from_xyz(
                     world.x,
-                    world.y + inner_h / 2.0 - 8.0,
+                    world.y + inner_h / 2.0 - 12.0,
                     Z_PANEL_TOP + 0.3 + z_offset,
                 ),
             ));
@@ -391,12 +393,13 @@ pub fn setup(
         BaseColor(Color::WHITE),
     ));
 
-    // Player HP display (top-left corner)
+    // Player HP display (top-left area, above arena)
     commands.spawn((
         Text2d::new("HP: 100"),
         TextLayout::new_with_justify(Justify::Left),
+        TextFont::from_font_size(28.0),
         TextColor(COLOR_TEXT),
-        Transform::from_xyz(-350.0, 260.0, Z_UI),
+        Transform::from_xyz(-580.0, 360.0, Z_UI),
         PlayerHealthText,
     ));
 
@@ -479,25 +482,27 @@ pub fn setup(
         parent.spawn((
             Sprite {
                 color: COLOR_HP_PLATE,
-                custom_size: Some(Vec2::new(48.0, 22.0)),
+                custom_size: Some(Vec2::new(64.0, 28.0)),
                 ..default()
             },
-            Transform::from_xyz(0.0, 50.0, 0.0),
+            Transform::from_xyz(0.0, 80.0, 0.0),
         ));
 
         parent.spawn((
             Text2d::new("100"),
             TextLayout::new_with_justify(Justify::Center),
+            TextFont::from_font_size(20.0),
             TextColor(COLOR_TEXT_SHADOW),
-            Transform::from_xyz(1.5, 48.5, 0.1),
+            Transform::from_xyz(1.5, 78.5, 0.1),
             HealthText,
         ));
 
         parent.spawn((
             Text2d::new("100"),
             TextLayout::new_with_justify(Justify::Center),
+            TextFont::from_font_size(20.0),
             TextColor(COLOR_TEXT),
-            Transform::from_xyz(0.0, 50.0, 0.2),
+            Transform::from_xyz(0.0, 80.0, 0.2),
             HealthText,
         ));
     });

@@ -114,6 +114,8 @@ pub struct ShootCooldown(pub Timer);
 pub enum ActionType {
     ChargedShot,
     Heal,
+    Shield,
+    WideSword,
 }
 
 /// State of an action slot
@@ -192,6 +194,19 @@ pub struct ChargedShot {
 /// Marker for heal effect visual
 #[derive(Component)]
 pub struct HealEffect;
+
+/// Shield that blocks incoming damage
+#[derive(Component)]
+pub struct Shield {
+    pub duration_timer: Timer,
+}
+
+/// Marker for WideSword slash effect
+#[derive(Component)]
+pub struct WideSwordSlash {
+    pub damage: i32,
+    pub hit_tiles: Vec<(i32, i32)>, // (x, y) tiles that will be hit
+}
 
 // ============================================================================
 // Action Bar UI Components

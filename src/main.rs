@@ -29,7 +29,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Megaman BN Style Arena".into(),
-                        resolution: (800, 600).into(),
+                        resolution: (1280, 800).into(),
                         ..default()
                     }),
                     ..default()

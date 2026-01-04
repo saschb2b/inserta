@@ -1,20 +1,33 @@
 use bevy::prelude::*;
 
+// ============================================================================
+// Screen Layout (1280x800 target resolution)
+// ============================================================================
+// Screen center is (0, 0)
+// Top-left: (-640, 400), Bottom-right: (640, -400)
+// Arena is centered but shifted up slightly to make room for action bar
+
+pub const SCREEN_WIDTH: f32 = 1280.0;
+pub const SCREEN_HEIGHT: f32 = 800.0;
+
+// Arena vertical offset (shift up to make room for action bar)
+pub const ARENA_Y_OFFSET: f32 = 40.0;
+
 // Grid layout
 pub const GRID_WIDTH: i32 = 6;
 pub const GRID_HEIGHT: i32 = 3;
 pub const PLAYER_AREA_WIDTH: i32 = 3;
 
 // Panel geometry (flat top-down MMBN style)
-pub const TILE_W: f32 = 100.0;
-pub const TILE_H: f32 = 60.0;
-pub const TILE_STEP_X: f32 = 102.0;
-pub const TILE_STEP_Y: f32 = 62.0;
+// Scaled up for 1280x800 - arena should be ~1000px wide, ~300px tall
+pub const TILE_W: f32 = 160.0;
+pub const TILE_H: f32 = 96.0;
+pub const TILE_STEP_X: f32 = 164.0;
+pub const TILE_STEP_Y: f32 = 100.0;
 pub const ROW_SKEW_X: f32 = 0.0; // No skew for MMBN flat style
-pub const TILE_TOP_INSET: f32 = 0.0;
 
 // Panel 3D depth effect
-pub const PANEL_DEPTH: f32 = 10.0;
+pub const PANEL_DEPTH: f32 = 16.0;
 
 // Sprite alignment
 // Anchor is relative to sprite center: -0.5 = bottom, 0 = center, 0.5 = top
@@ -25,22 +38,22 @@ pub const FIGHTER_ANCHOR: Vec2 = Vec2::new(0.0, -0.25);
 // Negative Y moves the character down so feet align with panel bottom
 pub const CHARACTER_OFFSET: Vec2 = Vec2::new(0.0, 0.0);
 
-// Bullets
-pub const BULLET_OFFSET: Vec2 = Vec2::new(70.0, 70.0);
-pub const BULLET_MOVE_TIMER: f32 = 0.06;
-pub const BULLET_DRAW_SIZE: Vec2 = Vec2::new(12.0, 12.0);
+// Bullets (scaled up proportionally)
+pub const BULLET_OFFSET: Vec2 = Vec2::new(110.0, 110.0);
+pub const BULLET_MOVE_TIMER: f32 = 0.05; // Slightly faster for larger arena
+pub const BULLET_DRAW_SIZE: Vec2 = Vec2::new(18.0, 18.0);
 
 // Muzzle flash
-pub const MUZZLE_OFFSET: Vec2 = Vec2::new(86.0, 70.0);
+pub const MUZZLE_OFFSET: Vec2 = Vec2::new(135.0, 110.0);
 
 // Fighter rendering
 // Scale to be roughly 2 panels tall (like in MMBN)
-pub const FIGHTER_DRAW_SIZE: Vec2 = Vec2::new(220.0, 220.0);
+pub const FIGHTER_DRAW_SIZE: Vec2 = Vec2::new(340.0, 340.0);
 
 // Slime enemy rendering (16x16 base sprites, scaled up)
-pub const SLIME_DRAW_SIZE: Vec2 = Vec2::new(80.0, 80.0);
+pub const SLIME_DRAW_SIZE: Vec2 = Vec2::new(128.0, 128.0);
 pub const SLIME_ANCHOR: Vec2 = Vec2::new(0.0, -0.40);
-pub const SLIME_OFFSET: Vec2 = Vec2::new(0.0, -5.0);
+pub const SLIME_OFFSET: Vec2 = Vec2::new(0.0, -8.0);
 
 // Z layers
 pub const Z_BACKGROUND: f32 = -10.0;
@@ -136,7 +149,7 @@ pub const ENEMY_DAMAGE: i32 = 10; // Damage enemy deals
 pub const CHARGED_SHOT_COOLDOWN: f32 = 3.0; // Cooldown after use
 pub const CHARGED_SHOT_CHARGE_TIME: f32 = 0.8; // Time to charge up
 pub const CHARGED_SHOT_DAMAGE: i32 = 25; // Damage dealt
-pub const CHARGED_SHOT_SIZE: Vec2 = Vec2::new(28.0, 28.0);
+pub const CHARGED_SHOT_SIZE: Vec2 = Vec2::new(40.0, 40.0);
 pub const COLOR_CHARGED_SHOT: Color = Color::srgb(1.0, 0.5, 0.1); // Orange
 
 // Heal action
@@ -144,10 +157,21 @@ pub const HEAL_COOLDOWN: f32 = 8.0; // Longer cooldown for heal
 pub const HEAL_CHARGE_TIME: f32 = 0.0; // Instant cast
 pub const HEAL_AMOUNT: i32 = 20; // HP restored
 
+// Shield action
+pub const SHIELD_COOLDOWN: f32 = 6.0; // Cooldown after shield expires
+pub const SHIELD_CHARGE_TIME: f32 = 0.0; // Instant activation
+pub const SHIELD_DURATION: f32 = 2.0; // Duration of invulnerability
+
+// WideSword action
+pub const WIDESWORD_COOLDOWN: f32 = 4.0; // Cooldown after use
+pub const WIDESWORD_CHARGE_TIME: f32 = 0.3; // Quick charge for melee
+pub const WIDESWORD_DAMAGE: i32 = 40; // High damage melee attack
+pub const WIDESWORD_SLASH_DURATION: f32 = 0.25; // Visual slash duration
+
 // Action Bar UI
-pub const ACTION_BAR_Y: f32 = -250.0; // Bottom of screen
-pub const ACTION_SLOT_SIZE: f32 = 50.0; // Size of each slot
-pub const ACTION_SLOT_SPACING: f32 = 10.0; // Gap between slots
+pub const ACTION_BAR_Y: f32 = -340.0; // Bottom of screen (800/2 - 60 margin)
+pub const ACTION_SLOT_SIZE: f32 = 56.0; // Size of each slot
+pub const ACTION_SLOT_SPACING: f32 = 12.0; // Gap between slots
 pub const ACTION_SLOT_COUNT: usize = 4; // Max slots (only 2 used for now)
 
 // Action slot colors
