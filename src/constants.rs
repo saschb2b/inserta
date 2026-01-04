@@ -185,3 +185,11 @@ pub const COLOR_ACTION_KEY_TEXT: Color = Color::srgb(0.9, 0.9, 0.9);
 // Action icons (using colored squares for now, can be replaced with sprites later)
 pub const COLOR_CHARGED_SHOT_ICON: Color = Color::srgb(1.0, 0.5, 0.1);
 pub const COLOR_HEAL_ICON: Color = Color::srgb(0.3, 0.9, 0.4);
+pub const COLOR_SHIELD_ICON: Color = Color::srgb(0.3, 0.6, 1.0); // Blue shield
+pub const COLOR_WIDESWORD_ICON: Color = Color::srgb(0.9, 0.3, 0.5); // Pink/red sword
+
+// Shield visual
+pub const COLOR_SHIELD: Color = Color::srgba(0.3, 0.6, 1.0, 0.5); // Semi-transparent blue
+
+// WideSword visual
+pub const COLOR_WIDESWORD_SLASH: Color = Color::srgba(1.0, 0.4, 0.6, 0.8); // Pink slash

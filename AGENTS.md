@@ -32,15 +32,15 @@ This repo is a small Bevy (Rust) prototype for a Mega Man Battle Network–style
   - Sprite sizes must not affect hit detection.
 
 ## Action System
-The fighter has up to 4 action slots (currently 2 implemented). Actions are special abilities with cooldowns.
+The fighter has 4 action slots, all implemented. Actions are special abilities with cooldowns.
 
 ### Key bindings
 | Slot | Keyboard | Gamepad (planned) | Action |
 |------|----------|-------------------|--------|
 | 1    | `1`      | A                 | Charged Shot |
 | 2    | `2`      | B                 | Heal |
-| 3    | `3`      | X                 | (empty) |
-| 4    | `4`      | Y                 | (empty) |
+| 3    | `3`      | X                 | Shield |
+| 4    | `4`      | Y                 | WideSword |
 
 ### Current actions
 1. **Charged Shot** (Slot 1, Key `1`)
@@ -55,13 +55,26 @@ The fighter has up to 4 action slots (currently 2 implemented). Actions are spec
    - 8 second cooldown (longer to prevent spam)
    - Visual: Green flash on player
 
+3. **Shield** (Slot 3, Key `3`)
+   - Instant activation (no charge time)
+   - Blocks all incoming damage for 2 seconds
+   - 6 second cooldown after shield expires
+   - Visual: Blue semi-transparent shield around player
+
+4. **WideSword** (Slot 4, Key `4`)
+   - Quick charge time (0.3s)
+   - Melee attack hitting the entire column in front of player (all 3 rows)
+   - Deals high damage (40 HP)
+   - 4 second cooldown after use
+   - Visual: Pink vertical slash effect
+
 ### Action states
 - `Ready`: Action can be triggered
 - `Charging`: Action is charging up (for charged abilities)
 - `OnCooldown`: Action was used, waiting for cooldown
 
 ### Action bar UI
-- Located at bottom center of screen (`ACTION_BAR_Y = -250`)
+- Located at bottom center of screen (`ACTION_BAR_Y = -340`)
 - Each slot shows:
   - Icon (colored square representing the action)
   - Key binding label below

@@ -5,8 +5,9 @@ use crate::constants::*;
 
 /// Spawns the action bar UI at the bottom of the screen
 pub fn setup_action_bar(mut commands: Commands) {
-    // Calculate total width for centering
-    let total_width = (ACTION_SLOT_SIZE * 2.0) + ACTION_SLOT_SPACING; // Only 2 slots for now
+    // Calculate total width for centering (4 slots now)
+    let slot_count = 4.0;
+    let total_width = (ACTION_SLOT_SIZE * slot_count) + (ACTION_SLOT_SPACING * (slot_count - 1.0));
     let start_x = -total_width / 2.0 + ACTION_SLOT_SIZE / 2.0;
 
     // Spawn action bar container
@@ -186,6 +187,176 @@ pub fn setup_action_bar(mut commands: Commands) {
                         ActionReadyIndicator { slot_index },
                     ));
                 });
+
+            // Slot 3: Shield
+            let slot_index = 2;
+            let x_offset = start_x + (ACTION_SLOT_SIZE + ACTION_SLOT_SPACING) * 2.0;
+            let key_label = "3";
+            let icon_color = COLOR_SHIELD_ICON;
+
+            parent
+                .spawn((
+                    Sprite {
+                        color: COLOR_ACTION_SLOT_BG,
+                        custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE)),
+                        ..default()
+                    },
+                    Transform::from_xyz(x_offset, 0.0, 0.0),
+                    ActionSlotUI { slot_index },
+                ))
+                .with_children(|slot| {
+                    // Border
+                    slot.spawn((
+                        Sprite {
+                            color: COLOR_ACTION_SLOT_BORDER,
+                            custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE + 4.0)),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, 0.0, -0.1),
+                    ));
+
+                    // Action icon
+                    slot.spawn((
+                        Sprite {
+                            color: icon_color,
+                            custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE * 0.6)),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, 2.0, 0.1),
+                    ));
+
+                    // Cooldown overlay
+                    slot.spawn((
+                        Sprite {
+                            color: COLOR_ACTION_COOLDOWN,
+                            custom_size: Some(Vec2::new(ACTION_SLOT_SIZE - 4.0, 0.0)),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, 0.0, 0.2),
+                        ActionCooldownOverlay { slot_index },
+                    ));
+
+                    // Charge bar
+                    slot.spawn((
+                        Sprite {
+                            color: COLOR_ACTION_CHARGE,
+                            custom_size: Some(Vec2::new(ACTION_SLOT_SIZE - 4.0, 4.0)),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, -ACTION_SLOT_SIZE / 2.0 + 6.0, 0.3),
+                        Visibility::Hidden,
+                        ActionChargeBar { slot_index },
+                    ));
+
+                    // Key label
+                    slot.spawn((
+                        Text2d::new(key_label),
+                        TextColor(COLOR_ACTION_KEY_TEXT),
+                        TextFont::from_font_size(14.0),
+                        Transform::from_xyz(0.0, -ACTION_SLOT_SIZE / 2.0 - 12.0, 0.1),
+                        ActionKeyText { slot_index },
+                    ));
+
+                    // Ready indicator
+                    slot.spawn((
+                        Sprite {
+                            color: COLOR_ACTION_SLOT_READY,
+                            custom_size: Some(Vec2::splat(8.0)),
+                            ..default()
+                        },
+                        Transform::from_xyz(
+                            ACTION_SLOT_SIZE / 2.0 - 8.0,
+                            ACTION_SLOT_SIZE / 2.0 - 8.0,
+                            0.3,
+                        ),
+                        ActionReadyIndicator { slot_index },
+                    ));
+                });
+
+            // Slot 4: WideSword
+            let slot_index = 3;
+            let x_offset = start_x + (ACTION_SLOT_SIZE + ACTION_SLOT_SPACING) * 3.0;
+            let key_label = "4";
+            let icon_color = COLOR_WIDESWORD_ICON;
+
+            parent
+                .spawn((
+                    Sprite {
+                        color: COLOR_ACTION_SLOT_BG,
+                        custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE)),
+                        ..default()
+                    },
+                    Transform::from_xyz(x_offset, 0.0, 0.0),
+                    ActionSlotUI { slot_index },
+                ))
+                .with_children(|slot| {
+                    // Border
+                    slot.spawn((
+                        Sprite {
+                            color: COLOR_ACTION_SLOT_BORDER,
+                            custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE + 4.0)),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, 0.0, -0.1),
+                    ));
+
+                    // Action icon
+                    slot.spawn((
+                        Sprite {
+                            color: icon_color,
+                            custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE * 0.6)),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, 2.0, 0.1),
+                    ));
+
+                    // Cooldown overlay
+                    slot.spawn((
+                        Sprite {
+                            color: COLOR_ACTION_COOLDOWN,
+                            custom_size: Some(Vec2::new(ACTION_SLOT_SIZE - 4.0, 0.0)),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, 0.0, 0.2),
+                        ActionCooldownOverlay { slot_index },
+                    ));
+
+                    // Charge bar
+                    slot.spawn((
+                        Sprite {
+                            color: COLOR_ACTION_CHARGE,
+                            custom_size: Some(Vec2::new(ACTION_SLOT_SIZE - 4.0, 4.0)),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, -ACTION_SLOT_SIZE / 2.0 + 6.0, 0.3),
+                        Visibility::Hidden,
+                        ActionChargeBar { slot_index },
+                    ));
+
+                    // Key label
+                    slot.spawn((
+                        Text2d::new(key_label),
+                        TextColor(COLOR_ACTION_KEY_TEXT),
+                        TextFont::from_font_size(14.0),
+                        Transform::from_xyz(0.0, -ACTION_SLOT_SIZE / 2.0 - 12.0, 0.1),
+                        ActionKeyText { slot_index },
+                    ));
+
+                    // Ready indicator
+                    slot.spawn((
+                        Sprite {
+                            color: COLOR_ACTION_SLOT_READY,
+                            custom_size: Some(Vec2::splat(8.0)),
+                            ..default()
+                        },
+                        Transform::from_xyz(
+                            ACTION_SLOT_SIZE / 2.0 - 8.0,
+                            ACTION_SLOT_SIZE / 2.0 - 8.0,
+                            0.3,
+                        ),
+                        ActionReadyIndicator { slot_index },
+                    ));
+                });
         });
 }
 
@@ -271,5 +442,21 @@ pub fn spawn_player_actions(mut commands: Commands) {
         ActionType::Heal,
         HEAL_COOLDOWN,
         HEAL_CHARGE_TIME,
+    ));
+
+    // Shield - Slot 3
+    commands.spawn(ActionSlot::new(
+        2,
+        ActionType::Shield,
+        SHIELD_COOLDOWN,
+        SHIELD_CHARGE_TIME,
+    ));
+
+    // WideSword - Slot 4
+    commands.spawn(ActionSlot::new(
+        3,
+        ActionType::WideSword,
+        WIDESWORD_COOLDOWN,
+        WIDESWORD_CHARGE_TIME,
     ));
 }

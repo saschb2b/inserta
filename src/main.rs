@@ -9,7 +9,10 @@ use components::{InputCooldown, ShootCooldown};
 use constants::{MOVE_COOLDOWN, SHOOT_COOLDOWN};
 use systems::{
     action_ui::{setup_action_bar, spawn_player_actions, update_action_bar_ui},
-    actions::{action_input, charged_shot_hit_enemy, heal_flash_effect},
+    actions::{
+        action_input, charged_shot_hit_enemy, despawn_widesword_slash, heal_flash_effect,
+        shield_blocks_damage, update_shield, widesword_hit_enemy,
+    },
     animation::{animate_player, animate_slime},
     combat::{
         bullet_hit_enemy, bullet_movement, bullet_tile_highlight, enemy_bullet_hit_player,
@@ -57,6 +60,11 @@ fn main() {
                 // Enemy AI
                 enemy_movement,
                 enemy_shoot,
+            ),
+        )
+        .add_systems(
+            Update,
+            (
                 // Combat
                 bullet_movement,
                 enemy_bullet_movement,
@@ -64,6 +72,17 @@ fn main() {
                 charged_shot_hit_enemy,
                 enemy_bullet_hit_player,
                 bullet_tile_highlight,
+                // Shield systems (run before damage)
+                update_shield,
+                shield_blocks_damage,
+                // WideSword systems
+                widesword_hit_enemy,
+                despawn_widesword_slash,
+            ),
+        )
+        .add_systems(
+            Update,
+            (
                 // Effects
                 entity_flash,
                 heal_flash_effect,
