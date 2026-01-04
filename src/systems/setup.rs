@@ -56,7 +56,7 @@ pub fn setup(
     ));
 
     // BGM
-    let bgm: Handle<AudioSource> = asset_server.load("characters/fighter/audio/bgm/battle.mp3");
+    let bgm: Handle<AudioSource> = asset_server.load("audio/bgm/battle.mp3");
     commands.spawn((
         AudioPlayer::new(bgm),
         PlaybackSettings::LOOP.with_volume(Volume::Linear(0.45)),

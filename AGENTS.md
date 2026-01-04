@@ -36,7 +36,7 @@ This repo is a small Bevy (Rust) prototype for a Mega Man Battle Network–style
 
 ## Assets
 - Fighter sprites live in `assets/characters/fighter/`.
-- Background music: `assets/characters/fighter/audio/bgm/`.
+- Background music: `assets/audio/bgm/`.
 
 ## Audio
 - MP3 decoding requires Bevy feature `mp3` (already enabled in `Cargo.toml`).
