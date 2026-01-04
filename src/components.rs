@@ -1,5 +1,97 @@
 use bevy::prelude::*;
 
+// ============================================================================
+// Game State
+// ============================================================================
+
+#[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
+pub enum GameState {
+    #[default]
+    Splash,
+    MainMenu,
+    Playing,
+}
+
+/// Marker component for entities that should be despawned when leaving a state
+#[derive(Component)]
+pub struct CleanupOnStateExit(pub GameState);
+
+// ============================================================================
+// Arena Configuration
+// ============================================================================
+
+/// Configuration for spawning a fighter
+#[derive(Clone, Debug)]
+pub struct FighterConfig {
+    pub start_x: i32,
+    pub start_y: i32,
+    pub max_hp: i32,
+    pub actions: Vec<ActionType>,
+}
+
+impl Default for FighterConfig {
+    fn default() -> Self {
+        Self {
+            start_x: 1,
+            start_y: 1,
+            max_hp: 100,
+            actions: vec![
+                ActionType::ChargedShot,
+                ActionType::Heal,
+                ActionType::Shield,
+                ActionType::WideSword,
+            ],
+        }
+    }
+}
+
+/// Configuration for spawning an enemy
+#[derive(Clone, Debug)]
+pub struct EnemyConfig {
+    pub enemy_type: EnemyType,
+    pub start_x: i32,
+    pub start_y: i32,
+    pub max_hp: i32,
+}
+
+impl Default for EnemyConfig {
+    fn default() -> Self {
+        Self {
+            enemy_type: EnemyType::Slime,
+            start_x: 4,
+            start_y: 1,
+            max_hp: 100,
+        }
+    }
+}
+
+/// Types of enemies
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum EnemyType {
+    #[default]
+    Slime,
+}
+
+/// Configuration for a complete arena battle
+#[derive(Resource, Clone, Debug)]
+pub struct ArenaConfig {
+    pub fighter: FighterConfig,
+    pub enemies: Vec<EnemyConfig>,
+}
+
+impl Default for ArenaConfig {
+    fn default() -> Self {
+        Self {
+            fighter: FighterConfig::default(),
+            enemies: vec![EnemyConfig::default()],
+        }
+    }
+}
+
+// ============================================================================
+// Core Components
+// ============================================================================
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GridPosition {
     pub x: i32,

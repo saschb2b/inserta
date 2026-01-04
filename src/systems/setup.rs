@@ -6,7 +6,12 @@ use bevy::sprite::Anchor;
 use bevy::text::Justify;
 
 use crate::assets::{FighterSprites, SlimeSprites};
-use crate::components::*;
+use crate::components::{
+    ActionBar, ActionChargeBar, ActionCooldownOverlay, ActionKeyText, ActionSlot, ActionSlotUI,
+    ActionType, ArenaConfig, BaseColor, CleanupOnStateExit, Enemy, EnemyAI, EnemyConfig, EnemyType,
+    FighterAnim, FighterAnimState, GameState, GridPosition, Health, HealthText, Player,
+    PlayerHealthText, RenderConfig, SlimeAnim, SlimeAnimState, TilePanel,
+};
 use crate::constants::*;
 use crate::systems::grid_utils::{tile_center_world, tile_floor_world};
 
@@ -143,15 +148,28 @@ fn frame_mesh(outer_w: f32, outer_h: f32, inner_w: f32, inner_h: f32, corner: f3
     mesh
 }
 
-pub fn setup(
+// ============================================================================
+// Global Setup (runs once at app startup)
+// ============================================================================
+
+/// Setup that runs once at app start - camera only
+pub fn setup_global(mut commands: Commands) {
+    commands.spawn(Camera2d);
+}
+
+// ============================================================================
+// Arena Setup (runs when entering Playing state)
+// ============================================================================
+
+/// Setup the arena background, grid, BGM, and spawn entities based on ArenaConfig
+pub fn setup_arena(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    config: Res<ArenaConfig>,
 ) {
-    commands.spawn(Camera2d);
-
     // ========================================================================
     // Background - Deep cyber void
     // ========================================================================
@@ -162,6 +180,7 @@ pub fn setup(
             ..default()
         },
         Transform::from_xyz(0.0, 0.0, Z_BACKGROUND),
+        CleanupOnStateExit(GameState::Playing),
     ));
 
     // ========================================================================
@@ -184,6 +203,7 @@ pub fn setup(
             Mesh2d(grid_line_h_mesh.clone()),
             MeshMaterial2d(mat),
             Transform::from_xyz(0.0, y, Z_GRID_LINES),
+            CleanupOnStateExit(GameState::Playing),
         ));
     }
 
@@ -199,6 +219,7 @@ pub fn setup(
             Mesh2d(grid_line_v_mesh.clone()),
             MeshMaterial2d(mat),
             Transform::from_xyz(x, ARENA_Y_OFFSET, Z_GRID_LINES),
+            CleanupOnStateExit(GameState::Playing),
         ));
     }
 
@@ -209,6 +230,7 @@ pub fn setup(
     commands.spawn((
         AudioPlayer::new(bgm),
         PlaybackSettings::LOOP.with_volume(Volume::Linear(0.45)),
+        CleanupOnStateExit(GameState::Playing),
     ));
 
     // ========================================================================
@@ -299,6 +321,7 @@ pub fn setup(
                     world.y - panel_h / 2.0 - PANEL_DEPTH / 2.0,
                     Z_PANEL_SIDE + z_offset,
                 ),
+                CleanupOnStateExit(GameState::Playing),
             ));
 
             // 2. Outer frame background (darkest)
@@ -306,6 +329,7 @@ pub fn setup(
                 Mesh2d(outer_frame_mesh.clone()),
                 MeshMaterial2d(outer_mat),
                 Transform::from_xyz(world.x, world.y, Z_PANEL_TOP + z_offset),
+                CleanupOnStateExit(GameState::Playing),
             ));
 
             // 3. Inner frame border (medium tone - creates the grid lines)
@@ -313,6 +337,7 @@ pub fn setup(
                 Mesh2d(inner_frame_mesh.clone()),
                 MeshMaterial2d(frame_mat),
                 Transform::from_xyz(world.x, world.y, Z_PANEL_TOP + 0.1 + z_offset),
+                CleanupOnStateExit(GameState::Playing),
             ));
 
             // 4. Inner panel surface (brightest - the actual walkable area)
@@ -322,6 +347,7 @@ pub fn setup(
                 MeshMaterial2d(unique_inner_mat),
                 Transform::from_xyz(world.x, world.y, Z_PANEL_TOP + 0.2 + z_offset),
                 TilePanel { x, y },
+                CleanupOnStateExit(GameState::Playing),
             ));
 
             // 5. Highlight strip at top of inner panel
@@ -333,6 +359,7 @@ pub fn setup(
                     world.y + inner_h / 2.0 - 12.0,
                     Z_PANEL_TOP + 0.3 + z_offset,
                 ),
+                CleanupOnStateExit(GameState::Playing),
             ));
         }
     }
@@ -363,8 +390,9 @@ pub fn setup(
     });
 
     // ========================================================================
-    // Player
+    // Player (from config)
     // ========================================================================
+    let fighter_config = &config.fighter;
     commands.spawn((
         Sprite {
             image: fighter_idle,
@@ -375,7 +403,10 @@ pub fn setup(
         },
         Anchor(FIGHTER_ANCHOR),
         Transform::default(),
-        GridPosition { x: 1, y: 1 },
+        GridPosition {
+            x: fighter_config.start_x,
+            y: fighter_config.start_y,
+        },
         RenderConfig {
             offset: CHARACTER_OFFSET,
             base_z: Z_CHARACTER,
@@ -387,20 +418,22 @@ pub fn setup(
         },
         Player,
         Health {
-            current: 100,
-            max: 100,
+            current: fighter_config.max_hp,
+            max: fighter_config.max_hp,
         },
         BaseColor(Color::WHITE),
+        CleanupOnStateExit(GameState::Playing),
     ));
 
     // Player HP display (top-left area, above arena)
     commands.spawn((
-        Text2d::new("HP: 100"),
+        Text2d::new(format!("HP: {}", fighter_config.max_hp)),
         TextLayout::new_with_justify(Justify::Left),
         TextFont::from_font_size(28.0),
         TextColor(COLOR_TEXT),
         Transform::from_xyz(-580.0, 360.0, Z_UI),
         PlayerHealthText,
+        CleanupOnStateExit(GameState::Playing),
     ));
 
     // ========================================================================
@@ -441,13 +474,34 @@ pub fn setup(
     });
 
     // ========================================================================
-    // Enemy (Slime)
+    // Enemies (from config)
     // ========================================================================
+    for enemy_config in &config.enemies {
+        match enemy_config.enemy_type {
+            EnemyType::Slime => {
+                spawn_slime(
+                    &mut commands,
+                    slime_idle.clone(),
+                    slime_idle_layout.clone(),
+                    enemy_config,
+                );
+            }
+        }
+    }
+}
+
+/// Spawn a slime enemy
+fn spawn_slime(
+    commands: &mut Commands,
+    texture: Handle<Image>,
+    layout: Handle<TextureAtlasLayout>,
+    config: &EnemyConfig,
+) {
     let enemy_entity = commands
         .spawn((
             Sprite {
-                image: slime_idle,
-                texture_atlas: Some(slime_idle_layout.into()),
+                image: texture,
+                texture_atlas: Some(layout.into()),
                 color: Color::WHITE,
                 custom_size: Some(SLIME_DRAW_SIZE),
                 flip_x: true, // Mirror to face left (toward player)
@@ -455,7 +509,10 @@ pub fn setup(
             },
             Anchor(SLIME_ANCHOR),
             Transform::default(),
-            GridPosition { x: 4, y: 1 },
+            GridPosition {
+                x: config.start_x,
+                y: config.start_y,
+            },
             RenderConfig {
                 offset: SLIME_OFFSET,
                 base_z: Z_CHARACTER,
@@ -467,14 +524,15 @@ pub fn setup(
             },
             Enemy,
             Health {
-                current: 100,
-                max: 100,
+                current: config.max_hp,
+                max: config.max_hp,
             },
             EnemyAI {
                 move_timer: Timer::from_seconds(ENEMY_MOVE_COOLDOWN, TimerMode::Repeating),
                 shoot_timer: Timer::from_seconds(ENEMY_SHOOT_COOLDOWN, TimerMode::Repeating),
             },
             BaseColor(Color::WHITE),
+            CleanupOnStateExit(GameState::Playing),
         ))
         .id();
 
@@ -489,7 +547,7 @@ pub fn setup(
         ));
 
         parent.spawn((
-            Text2d::new("100"),
+            Text2d::new(config.max_hp.to_string()),
             TextLayout::new_with_justify(Justify::Center),
             TextFont::from_font_size(20.0),
             TextColor(COLOR_TEXT_SHADOW),
@@ -498,7 +556,7 @@ pub fn setup(
         ));
 
         parent.spawn((
-            Text2d::new("100"),
+            Text2d::new(config.max_hp.to_string()),
             TextLayout::new_with_justify(Justify::Center),
             TextFont::from_font_size(20.0),
             TextColor(COLOR_TEXT),
@@ -506,4 +564,209 @@ pub fn setup(
             HealthText,
         ));
     });
+}
+
+// ============================================================================
+// Action Bar Setup (runs when entering Playing state)
+// ============================================================================
+
+/// Spawns the action bar UI at the bottom of the screen
+pub fn setup_action_bar(mut commands: Commands, config: Res<ArenaConfig>) {
+    let actions = &config.fighter.actions;
+    let slot_count = actions.len() as f32;
+
+    if slot_count == 0.0 {
+        return;
+    }
+
+    let total_width = (ACTION_SLOT_SIZE * slot_count) + (ACTION_SLOT_SPACING * (slot_count - 1.0));
+    let start_x = -total_width / 2.0 + ACTION_SLOT_SIZE / 2.0;
+
+    // Pre-calculate all slot data
+    let slot_data: Vec<ActionSlotData> = actions
+        .iter()
+        .enumerate()
+        .map(|(i, action_type)| ActionSlotData {
+            slot_index: i,
+            x_offset: start_x + (ACTION_SLOT_SIZE + ACTION_SLOT_SPACING) * i as f32,
+            key_label: format!("{}", i + 1),
+            icon_color: get_action_icon_color(action_type),
+        })
+        .collect();
+
+    // Spawn action bar container
+    commands
+        .spawn((
+            Transform::from_xyz(0.0, ACTION_BAR_Y, Z_UI),
+            Visibility::Visible,
+            ActionBar,
+            CleanupOnStateExit(GameState::Playing),
+        ))
+        .with_children(|parent| {
+            for data in &slot_data {
+                parent
+                    .spawn((
+                        Sprite {
+                            color: COLOR_ACTION_SLOT_BG,
+                            custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE)),
+                            ..default()
+                        },
+                        Transform::from_xyz(data.x_offset, 0.0, 0.0),
+                        ActionSlotUI {
+                            slot_index: data.slot_index,
+                        },
+                    ))
+                    .with_children(|slot| {
+                        let slot_index = data.slot_index;
+                        let icon_color = data.icon_color;
+                        let key_label = data.key_label.clone();
+
+                        // Border
+                        slot.spawn((
+                            Sprite {
+                                color: COLOR_ACTION_SLOT_BORDER,
+                                custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE + 4.0)),
+                                ..default()
+                            },
+                            Transform::from_xyz(0.0, 0.0, -0.1),
+                        ));
+
+                        // Action icon
+                        slot.spawn((
+                            Sprite {
+                                color: icon_color,
+                                custom_size: Some(Vec2::splat(ACTION_SLOT_SIZE * 0.6)),
+                                ..default()
+                            },
+                            Transform::from_xyz(0.0, 2.0, 0.1),
+                        ));
+
+                        // Cooldown overlay
+                        slot.spawn((
+                            Sprite {
+                                color: COLOR_ACTION_COOLDOWN,
+                                custom_size: Some(Vec2::new(ACTION_SLOT_SIZE - 4.0, 0.0)),
+                                ..default()
+                            },
+                            Transform::from_xyz(0.0, 0.0, 0.2),
+                            ActionCooldownOverlay { slot_index },
+                        ));
+
+                        // Charge bar
+                        slot.spawn((
+                            Sprite {
+                                color: COLOR_ACTION_CHARGE,
+                                custom_size: Some(Vec2::new(ACTION_SLOT_SIZE - 4.0, 4.0)),
+                                ..default()
+                            },
+                            Transform::from_xyz(0.0, -ACTION_SLOT_SIZE / 2.0 + 6.0, 0.3),
+                            Visibility::Hidden,
+                            ActionChargeBar { slot_index },
+                        ));
+
+                        // Key label
+                        slot.spawn((
+                            Text2d::new(key_label),
+                            TextColor(COLOR_ACTION_KEY_TEXT),
+                            TextFont::from_font_size(14.0),
+                            Transform::from_xyz(0.0, -ACTION_SLOT_SIZE / 2.0 - 12.0, 0.1),
+                            ActionKeyText { slot_index },
+                        ));
+
+                        // Ready indicator
+                        slot.spawn((
+                            Sprite {
+                                color: COLOR_ACTION_SLOT_READY,
+                                custom_size: Some(Vec2::splat(8.0)),
+                                ..default()
+                            },
+                            Transform::from_xyz(
+                                ACTION_SLOT_SIZE / 2.0 - 8.0,
+                                ACTION_SLOT_SIZE / 2.0 - 8.0,
+                                0.3,
+                            ),
+                            ActionReadyIndicator { slot_index },
+                        ));
+                    });
+            }
+        });
+}
+
+/// Get the icon color for an action type
+fn get_action_icon_color(action_type: &ActionType) -> Color {
+    match action_type {
+        ActionType::ChargedShot => COLOR_CHARGED_SHOT_ICON,
+        ActionType::Heal => COLOR_HEAL_ICON,
+        ActionType::Shield => COLOR_SHIELD_ICON,
+        ActionType::WideSword => COLOR_WIDESWORD_ICON,
+    }
+}
+
+/// Helper struct to hold action slot spawn data
+struct ActionSlotData {
+    slot_index: usize,
+    x_offset: f32,
+    key_label: String,
+    icon_color: Color,
+}
+
+/// Marker for the ready indicator dot
+#[derive(Component)]
+pub struct ActionReadyIndicator {
+    pub slot_index: usize,
+}
+
+/// Spawn the actual ActionSlot components based on config
+pub fn spawn_player_actions(mut commands: Commands, config: Res<ArenaConfig>) {
+    for (i, action_type) in config.fighter.actions.iter().enumerate() {
+        let (cooldown, charge_time) = get_action_timings(action_type);
+        commands.spawn((
+            ActionSlot::new(i, *action_type, cooldown, charge_time),
+            CleanupOnStateExit(GameState::Playing),
+        ));
+    }
+}
+
+/// Get cooldown and charge time for an action type
+fn get_action_timings(action_type: &ActionType) -> (f32, f32) {
+    match action_type {
+        ActionType::ChargedShot => (CHARGED_SHOT_COOLDOWN, CHARGED_SHOT_CHARGE_TIME),
+        ActionType::Heal => (HEAL_COOLDOWN, HEAL_CHARGE_TIME),
+        ActionType::Shield => (SHIELD_COOLDOWN, SHIELD_CHARGE_TIME),
+        ActionType::WideSword => (WIDESWORD_COOLDOWN, WIDESWORD_CHARGE_TIME),
+    }
+}
+
+// ============================================================================
+// Cleanup
+// ============================================================================
+
+/// Cleanup for when leaving Playing state
+pub fn cleanup_arena(mut commands: Commands, query: Query<(Entity, &CleanupOnStateExit)>) {
+    for (entity, scoped) in &query {
+        if scoped.0 == GameState::Playing {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Cleanup for when leaving Splash state
+pub fn cleanup_splash_entities(
+    mut commands: Commands,
+    query: Query<(Entity, &CleanupOnStateExit)>,
+) {
+    for (entity, scoped) in &query {
+        if scoped.0 == GameState::Splash {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Cleanup for when leaving MainMenu state
+pub fn cleanup_menu_entities(mut commands: Commands, query: Query<(Entity, &CleanupOnStateExit)>) {
+    for (entity, scoped) in &query {
+        if scoped.0 == GameState::MainMenu {
+            commands.entity(entity).despawn();
+        }
+    }
 }
