@@ -127,3 +127,37 @@ pub const MUZZLE_TIME: f32 = 0.06;
 // Damage
 pub const PLAYER_DAMAGE: i32 = 1; // Damage player deals
 pub const ENEMY_DAMAGE: i32 = 10; // Damage enemy deals
+
+// ============================================================================
+// Action System
+// ============================================================================
+
+// Charged Shot action
+pub const CHARGED_SHOT_COOLDOWN: f32 = 3.0; // Cooldown after use
+pub const CHARGED_SHOT_CHARGE_TIME: f32 = 0.8; // Time to charge up
+pub const CHARGED_SHOT_DAMAGE: i32 = 25; // Damage dealt
+pub const CHARGED_SHOT_SIZE: Vec2 = Vec2::new(28.0, 28.0);
+pub const COLOR_CHARGED_SHOT: Color = Color::srgb(1.0, 0.5, 0.1); // Orange
+
+// Heal action
+pub const HEAL_COOLDOWN: f32 = 8.0; // Longer cooldown for heal
+pub const HEAL_CHARGE_TIME: f32 = 0.0; // Instant cast
+pub const HEAL_AMOUNT: i32 = 20; // HP restored
+
+// Action Bar UI
+pub const ACTION_BAR_Y: f32 = -250.0; // Bottom of screen
+pub const ACTION_SLOT_SIZE: f32 = 50.0; // Size of each slot
+pub const ACTION_SLOT_SPACING: f32 = 10.0; // Gap between slots
+pub const ACTION_SLOT_COUNT: usize = 4; // Max slots (only 2 used for now)
+
+// Action slot colors
+pub const COLOR_ACTION_SLOT_BG: Color = Color::srgba(0.1, 0.1, 0.2, 0.85);
+pub const COLOR_ACTION_SLOT_BORDER: Color = Color::srgb(0.4, 0.4, 0.6);
+pub const COLOR_ACTION_SLOT_READY: Color = Color::srgb(0.3, 0.7, 0.3);
+pub const COLOR_ACTION_COOLDOWN: Color = Color::srgba(0.0, 0.0, 0.0, 0.7);
+pub const COLOR_ACTION_CHARGE: Color = Color::srgb(1.0, 0.8, 0.2);
+pub const COLOR_ACTION_KEY_TEXT: Color = Color::srgb(0.9, 0.9, 0.9);
+
+// Action icons (using colored squares for now, can be replaced with sprites later)
+pub const COLOR_CHARGED_SHOT_ICON: Color = Color::srgb(1.0, 0.5, 0.1);
+pub const COLOR_HEAL_ICON: Color = Color::srgb(0.3, 0.9, 0.4);
