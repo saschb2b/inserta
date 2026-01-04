@@ -59,6 +59,20 @@ pub struct FighterAnim {
     pub timer: Timer,
 }
 
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SlimeAnimState {
+    Idle,
+    Shoot,
+    Dead,
+}
+
+#[derive(Component)]
+pub struct SlimeAnim {
+    pub state: SlimeAnimState,
+    pub frame: usize,
+    pub timer: Timer,
+}
+
 #[derive(Resource)]
 pub struct InputCooldown(pub Timer);
 

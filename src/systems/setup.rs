@@ -4,7 +4,7 @@ use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::sprite::{Anchor, MeshMaterial2d};
 
-use crate::assets::FighterSprites;
+use crate::assets::{FighterSprites, SlimeSprites};
 use crate::components::*;
 use crate::constants::*;
 use crate::systems::grid_utils::{tile_center_world, tile_floor_world};
@@ -380,23 +380,67 @@ pub fn setup(
     ));
 
     // ========================================================================
-    // Enemy
+    // Slime sprite sheets (16x16 frames, 3 columns per row)
+    // ========================================================================
+    // IDLE - WALK: 48x48 = 3x3 grid, 7 frames used
+    // DEAD: 48x48 = 3x3 grid, 7 frames used
+    // SHOOTING: 48x64 = 3x4 grid, 10 frames used
+    let slime_idle_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
+        UVec2::new(16, 16),
+        3, // 3 columns
+        3, // 3 rows
+        None,
+        None,
+    ));
+
+    let slime_shoot_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
+        UVec2::new(16, 16),
+        3, // 3 columns
+        4, // 4 rows
+        None,
+        None,
+    ));
+
+    let slime_idle = asset_server.load("enemies/slime/IDLE - WALK.png");
+    let slime_shoot = asset_server.load("enemies/slime/SHOOTING.png");
+    let slime_dead = asset_server.load("enemies/slime/DEAD.png");
+
+    commands.insert_resource(SlimeSprites {
+        layout: slime_idle_layout.clone(),
+        shoot_layout: slime_shoot_layout,
+        idle: slime_idle.clone(),
+        shoot: slime_shoot.clone(),
+        dead: slime_dead.clone(),
+        idle_frames: 7,
+        shoot_frames: 10,
+        dead_frames: 7,
+    });
+
+    // ========================================================================
+    // Enemy (Slime)
     // ========================================================================
     let enemy_entity = commands
         .spawn((
             Sprite {
-                color: COLOR_ENEMY,
-                anchor: Anchor::BottomCenter,
-                custom_size: Some(Vec2::new(70.0, 90.0)),
+                image: slime_idle,
+                texture_atlas: Some(slime_idle_layout.into()),
+                color: Color::WHITE,
+                anchor: Anchor::Custom(SLIME_ANCHOR),
+                custom_size: Some(SLIME_DRAW_SIZE),
+                flip_x: true, // Mirror to face left (toward player)
                 ..default()
             },
             Transform::default(),
             GridPosition { x: 4, y: 1 },
             RenderConfig {
-                offset: CHARACTER_OFFSET,
+                offset: SLIME_OFFSET,
                 base_z: Z_CHARACTER,
             },
-            BaseColor(COLOR_ENEMY),
+            SlimeAnim {
+                state: SlimeAnimState::Idle,
+                frame: 0,
+                timer: Timer::from_seconds(0.12, TimerMode::Repeating),
+            },
             Enemy,
             Health {
                 current: 100,
@@ -412,14 +456,14 @@ pub fn setup(
                 custom_size: Some(Vec2::new(48.0, 22.0)),
                 ..default()
             },
-            Transform::from_xyz(0.0, 96.0, 0.0),
+            Transform::from_xyz(0.0, 50.0, 0.0),
         ));
 
         parent.spawn((
             Text2d::new("100"),
             TextLayout::new_with_justify(JustifyText::Center),
             TextColor(COLOR_TEXT_SHADOW),
-            Transform::from_xyz(1.5, 94.5, 0.1),
+            Transform::from_xyz(1.5, 48.5, 0.1),
             HealthText,
         ));
 
@@ -427,7 +471,7 @@ pub fn setup(
             Text2d::new("100"),
             TextLayout::new_with_justify(JustifyText::Center),
             TextColor(COLOR_TEXT),
-            Transform::from_xyz(0.0, 96.0, 0.2),
+            Transform::from_xyz(0.0, 50.0, 0.2),
             HealthText,
         ));
     });

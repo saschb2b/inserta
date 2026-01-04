@@ -8,7 +8,7 @@ mod systems;
 use components::{InputCooldown, ShootCooldown};
 use constants::{MOVE_COOLDOWN, SHOOT_COOLDOWN};
 use systems::{
-    animation::animate_player,
+    animation::{animate_player, animate_slime},
     combat::{bullet_hit_enemy, bullet_movement, enemy_flash, muzzle_lifetime},
     common::update_transforms,
     player::{move_player, player_shoot},
@@ -44,6 +44,7 @@ fn main() {
                 move_player,
                 player_shoot,
                 animate_player,
+                animate_slime,
                 bullet_movement,
                 bullet_hit_enemy,
                 enemy_flash,

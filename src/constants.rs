@@ -37,6 +37,11 @@ pub const MUZZLE_OFFSET: Vec2 = Vec2::new(86.0, 70.0);
 // Scale to be roughly 2 panels tall (like in MMBN)
 pub const FIGHTER_DRAW_SIZE: Vec2 = Vec2::new(220.0, 220.0);
 
+// Slime enemy rendering (16x16 base sprites, scaled up)
+pub const SLIME_DRAW_SIZE: Vec2 = Vec2::new(80.0, 80.0);
+pub const SLIME_ANCHOR: Vec2 = Vec2::new(0.0, -0.40);
+pub const SLIME_OFFSET: Vec2 = Vec2::new(0.0, -5.0);
+
 // Z layers
 pub const Z_BACKGROUND: f32 = -10.0;
 pub const Z_GRID_LINES: f32 = -5.0;
