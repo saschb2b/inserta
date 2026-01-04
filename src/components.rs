@@ -15,6 +15,10 @@ pub struct Enemy;
 #[derive(Component)]
 pub struct Bullet;
 
+/// Marker for enemy bullets (travel left instead of right)
+#[derive(Component)]
+pub struct EnemyBullet;
+
 #[derive(Component)]
 pub struct MuzzleFlash;
 
@@ -83,6 +87,17 @@ pub struct TilePanel {
 /// Stores the base color of a tile panel for restoration after highlight
 #[derive(Component)]
 pub struct TileBaseColor(pub Color);
+
+/// Player health display text marker
+#[derive(Component)]
+pub struct PlayerHealthText;
+
+/// Enemy AI timers
+#[derive(Component)]
+pub struct EnemyAI {
+    pub move_timer: Timer,
+    pub shoot_timer: Timer,
+}
 
 #[derive(Resource)]
 pub struct InputCooldown(pub Timer);

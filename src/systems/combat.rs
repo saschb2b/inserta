@@ -4,16 +4,37 @@ use bevy::sprite::MeshMaterial2d;
 use crate::components::*;
 use crate::constants::*;
 
+/// Player bullets move right
 pub fn bullet_movement(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut GridPosition, &mut MoveTimer), With<Bullet>>,
+    mut query: Query<
+        (Entity, &mut GridPosition, &mut MoveTimer),
+        (With<Bullet>, Without<EnemyBullet>),
+    >,
 ) {
     for (entity, mut pos, mut timer) in &mut query {
         timer.0.tick(time.delta());
         if timer.0.finished() {
             pos.x += 1;
             if pos.x >= GRID_WIDTH {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
+}
+
+/// Enemy bullets move left
+pub fn enemy_bullet_movement(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut GridPosition, &mut MoveTimer), With<EnemyBullet>>,
+) {
+    for (entity, mut pos, mut timer) in &mut query {
+        timer.0.tick(time.delta());
+        if timer.0.finished() {
+            pos.x -= 1;
+            if pos.x < 0 {
                 commands.entity(entity).despawn();
             }
         }
@@ -33,22 +54,21 @@ pub fn muzzle_lifetime(
     }
 }
 
+/// Player bullets hit enemies
 pub fn bullet_hit_enemy(
     mut commands: Commands,
-    bullet_query: Query<(Entity, &GridPosition), With<Bullet>>,
+    bullet_query: Query<(Entity, &GridPosition), (With<Bullet>, Without<EnemyBullet>)>,
     mut enemy_query: Query<(Entity, &GridPosition, &mut Health, &Children), With<Enemy>>,
     mut text_query: Query<&mut Text2d, With<HealthText>>,
 ) {
-    // Tile-based collision: a hit occurs if a bullet occupies the same tile as the enemy.
     for (bullet_entity, bullet_pos) in &bullet_query {
         for (enemy_entity, enemy_pos, mut health, children) in &mut enemy_query {
             if bullet_pos == enemy_pos {
-                health.current -= 1;
+                health.current -= PLAYER_DAMAGE;
                 commands.entity(bullet_entity).despawn();
 
                 // Update HP text children (shadow + main)
-                for i in 0..children.len() {
-                    let child = children[i];
+                for child in children.iter() {
                     if let Ok(mut text) = text_query.get_mut(child) {
                         text.0 = health.current.to_string();
                     }
@@ -67,10 +87,43 @@ pub fn bullet_hit_enemy(
     }
 }
 
-pub fn enemy_flash(
+/// Enemy bullets hit player
+pub fn enemy_bullet_hit_player(
+    mut commands: Commands,
+    bullet_query: Query<(Entity, &GridPosition), With<EnemyBullet>>,
+    mut player_query: Query<(Entity, &GridPosition, &mut Health), With<Player>>,
+    mut hp_text_query: Query<&mut Text2d, With<PlayerHealthText>>,
+) {
+    for (bullet_entity, bullet_pos) in &bullet_query {
+        for (player_entity, player_pos, mut health) in &mut player_query {
+            if bullet_pos == player_pos {
+                health.current -= ENEMY_DAMAGE;
+                commands.entity(bullet_entity).despawn();
+
+                // Update player HP text
+                for mut text in &mut hp_text_query {
+                    text.0 = format!("HP: {}", health.current.max(0));
+                }
+
+                // Flash feedback
+                commands
+                    .entity(player_entity)
+                    .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
+
+                if health.current <= 0 {
+                    // Player defeated - could trigger game over
+                    commands.entity(player_entity).despawn();
+                }
+            }
+        }
+    }
+}
+
+/// Flash effect for any entity with FlashTimer
+pub fn entity_flash(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut Sprite, &BaseColor, &mut FlashTimer), With<Enemy>>,
+    mut query: Query<(Entity, &mut Sprite, &BaseColor, &mut FlashTimer)>,
 ) {
     for (entity, mut sprite, base, mut flash) in &mut query {
         flash.0.tick(time.delta());
@@ -79,19 +132,24 @@ pub fn enemy_flash(
             sprite.color = base.0;
             commands.entity(entity).remove::<FlashTimer>();
         } else {
-            sprite.color = Color::WHITE;
+            sprite.color = Color::srgb(1.0, 0.3, 0.3); // Red flash for damage
         }
     }
 }
 
 /// Highlights tiles that have bullets on them
 pub fn bullet_tile_highlight(
-    bullet_query: Query<&GridPosition, With<Bullet>>,
+    player_bullet_query: Query<&GridPosition, (With<Bullet>, Without<EnemyBullet>)>,
+    enemy_bullet_query: Query<&GridPosition, With<EnemyBullet>>,
     mut tile_query: Query<(&TilePanel, &MeshMaterial2d<ColorMaterial>)>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    // Collect all tile positions that have bullets
-    let bullet_positions: Vec<(i32, i32)> = bullet_query.iter().map(|pos| (pos.x, pos.y)).collect();
+    // Collect all tile positions that have bullets (both player and enemy)
+    let mut bullet_positions: Vec<(i32, i32)> = player_bullet_query
+        .iter()
+        .map(|pos| (pos.x, pos.y))
+        .collect();
+    bullet_positions.extend(enemy_bullet_query.iter().map(|pos| (pos.x, pos.y)));
 
     // Update tile materials based on bullet presence
     for (tile, material_handle) in &mut tile_query {

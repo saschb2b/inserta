@@ -383,6 +383,20 @@ pub fn setup(
             timer: Timer::from_seconds(0.1, TimerMode::Repeating),
         },
         Player,
+        Health {
+            current: 100,
+            max: 100,
+        },
+        BaseColor(Color::WHITE),
+    ));
+
+    // Player HP display (top-left corner)
+    commands.spawn((
+        Text2d::new("HP: 100"),
+        TextLayout::new_with_justify(JustifyText::Left),
+        TextColor(COLOR_TEXT),
+        Transform::from_xyz(-350.0, 260.0, Z_UI),
+        PlayerHealthText,
     ));
 
     // ========================================================================
@@ -452,6 +466,11 @@ pub fn setup(
                 current: 100,
                 max: 100,
             },
+            EnemyAI {
+                move_timer: Timer::from_seconds(ENEMY_MOVE_COOLDOWN, TimerMode::Repeating),
+                shoot_timer: Timer::from_seconds(ENEMY_SHOOT_COOLDOWN, TimerMode::Repeating),
+            },
+            BaseColor(Color::WHITE),
         ))
         .id();
 
