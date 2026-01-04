@@ -7,5 +7,7 @@ pub struct FighterSprites {
     pub idle: Handle<Image>,
     pub walk: Handle<Image>,
     pub shoot: Handle<Image>,
-    pub frames: usize,
+    pub idle_frames: usize,
+    pub walk_frames: usize,
+    pub shoot_frames: usize,
 }

@@ -155,7 +155,9 @@ pub fn setup(
         idle: fighter_idle.clone(),
         walk: fighter_walk.clone(),
         shoot: fighter_shoot.clone(),
-        frames: 10,
+        idle_frames: 10,
+        walk_frames: 10,
+        shoot_frames: 3,
     });
 
     // Player

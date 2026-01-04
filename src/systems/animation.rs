@@ -23,6 +23,14 @@ fn animation_for_state(sprites: &FighterSprites, state: FighterAnimState) -> Han
     }
 }
 
+fn frames_for_state(sprites: &FighterSprites, state: FighterAnimState) -> usize {
+    match state {
+        FighterAnimState::Idle => sprites.idle_frames,
+        FighterAnimState::Walk => sprites.walk_frames,
+        FighterAnimState::Shoot => sprites.shoot_frames,
+    }
+}
+
 fn fps_for_state(state: FighterAnimState) -> f32 {
     match state {
         FighterAnimState::Idle => 10.0,
@@ -65,7 +73,8 @@ pub fn animate_player(
 
         anim.timer.tick(time.delta());
         if anim.timer.finished() {
-            anim.frame = (anim.frame + 1) % sprites.frames;
+            let frame_count = frames_for_state(&sprites, anim.state);
+            anim.frame = (anim.frame + 1) % frame_count;
             if let Some(atlas) = sprite.texture_atlas.as_mut() {
                 atlas.index = anim.frame;
             }
