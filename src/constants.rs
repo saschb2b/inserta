@@ -98,6 +98,9 @@ pub const COLOR_ENEMY_PANEL_SIDE: Color = Color::srgb(0.10, 0.20, 0.55);
 pub const COLOR_PANEL_HIGHLIGHT: Color = Color::srgba(1.0, 1.0, 1.0, 0.35);
 pub const COLOR_PANEL_SHADOW: Color = Color::srgba(0.0, 0.0, 0.0, 0.4);
 
+// Bullet trail highlight (yellow glow on tiles)
+pub const COLOR_BULLET_HIGHLIGHT: Color = Color::srgba(1.0, 0.9, 0.3, 0.5);
+
 // Characters
 pub const COLOR_ENEMY: Color = Color::srgb(0.82, 0.2, 0.86);
 

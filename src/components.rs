@@ -73,6 +73,17 @@ pub struct SlimeAnim {
     pub timer: Timer,
 }
 
+/// Marker for the inner panel surface that can be highlighted
+#[derive(Component)]
+pub struct TilePanel {
+    pub x: i32,
+    pub y: i32,
+}
+
+/// Stores the base color of a tile panel for restoration after highlight
+#[derive(Component)]
+pub struct TileBaseColor(pub Color);
+
 #[derive(Resource)]
 pub struct InputCooldown(pub Timer);
 

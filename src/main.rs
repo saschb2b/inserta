@@ -9,7 +9,9 @@ use components::{InputCooldown, ShootCooldown};
 use constants::{MOVE_COOLDOWN, SHOOT_COOLDOWN};
 use systems::{
     animation::{animate_player, animate_slime},
-    combat::{bullet_hit_enemy, bullet_movement, enemy_flash, muzzle_lifetime},
+    combat::{
+        bullet_hit_enemy, bullet_movement, bullet_tile_highlight, enemy_flash, muzzle_lifetime,
+    },
     common::update_transforms,
     player::{move_player, player_shoot},
     setup::setup,
@@ -47,6 +49,7 @@ fn main() {
                 animate_slime,
                 bullet_movement,
                 bullet_hit_enemy,
+                bullet_tile_highlight,
                 enemy_flash,
                 muzzle_lifetime,
                 update_transforms,

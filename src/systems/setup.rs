@@ -244,13 +244,11 @@ pub fn setup(
     // Player panel colors (red/orange like MMBN)
     let player_outer_mat = materials.add(ColorMaterial::from(COLOR_PLAYER_PANEL_DARK));
     let player_frame_mat = materials.add(ColorMaterial::from(COLOR_PLAYER_PANEL_FRAME));
-    let player_inner_mat = materials.add(ColorMaterial::from(COLOR_PLAYER_PANEL_TOP));
     let player_front_mat = materials.add(ColorMaterial::from(COLOR_PLAYER_PANEL_SIDE));
 
     // Enemy panel colors (blue like MMBN)
     let enemy_outer_mat = materials.add(ColorMaterial::from(COLOR_ENEMY_PANEL_DARK));
     let enemy_frame_mat = materials.add(ColorMaterial::from(COLOR_ENEMY_PANEL_FRAME));
-    let enemy_inner_mat = materials.add(ColorMaterial::from(COLOR_ENEMY_PANEL_TOP));
     let enemy_front_mat = materials.add(ColorMaterial::from(COLOR_ENEMY_PANEL_SIDE));
 
     // Shared
@@ -263,18 +261,24 @@ pub fn setup(
         for y in 0..GRID_HEIGHT {
             let is_player = x < PLAYER_AREA_WIDTH;
 
-            let (outer_mat, frame_mat, inner_mat, front_mat) = if is_player {
+            // Create unique material for inner panel (so it can be highlighted individually)
+            let inner_color = if is_player {
+                COLOR_PLAYER_PANEL_TOP
+            } else {
+                COLOR_ENEMY_PANEL_TOP
+            };
+            let unique_inner_mat = materials.add(ColorMaterial::from(inner_color));
+
+            let (outer_mat, frame_mat, front_mat) = if is_player {
                 (
                     player_outer_mat.clone(),
                     player_frame_mat.clone(),
-                    player_inner_mat.clone(),
                     player_front_mat.clone(),
                 )
             } else {
                 (
                     enemy_outer_mat.clone(),
                     enemy_frame_mat.clone(),
-                    enemy_inner_mat.clone(),
                     enemy_front_mat.clone(),
                 )
             };
@@ -309,10 +313,12 @@ pub fn setup(
             ));
 
             // 4. Inner panel surface (brightest - the actual walkable area)
+            // Each tile gets its own unique material for individual highlighting
             commands.spawn((
                 Mesh2d(inner_panel_mesh.clone()),
-                MeshMaterial2d(inner_mat),
+                MeshMaterial2d(unique_inner_mat),
                 Transform::from_xyz(world.x, world.y, Z_PANEL_TOP + 0.2 + z_offset),
+                TilePanel { x, y },
             ));
 
             // 5. Highlight strip at top of inner panel
