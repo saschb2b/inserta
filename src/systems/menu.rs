@@ -182,7 +182,6 @@ pub fn handle_menu_selection(
                                 start_y: 1,
                                 max_hp: 100,
                                 actions: vec![
-                                    ActionType::ChargedShot,
                                     ActionType::Heal,
                                     ActionType::Shield,
                                     ActionType::WideSword,

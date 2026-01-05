@@ -15,12 +15,15 @@ This repo is a small Bevy (Rust) prototype for a Mega Man Battle Network–style
   - `setup.rs`: Spawns arena, entities, and BGM
   - `common.rs`: Grid → world transform updates (tile-floor based)
   - `grid_utils.rs`: Tile coordinate mapping helpers
-  - `player.rs`: Movement + shooting input
+  - `player.rs`: Movement input (shooting moved to weapon system)
   - `combat.rs`: Bullet movement + tile-based hits
   - `animation.rs`: Player sprite-sheet animation
   - `actions.rs`: Action system (special abilities with cooldowns)
   - `action_ui.rs`: Action bar UI at bottom of screen
   - `enemy_ai.rs`: Enemy movement and shooting AI
+- `src/weapons/`
+  - `mod.rs`: Weapon system (stats, components, plugin, systems)
+  - `blaster.rs`: Blaster weapon implementation
 
 ## Core gameplay rules (keep consistent)
 - Arena is `3x6` tiles (`GRID_HEIGHT=3`, `GRID_WIDTH=6`).
@@ -31,37 +34,69 @@ This repo is a small Bevy (Rust) prototype for a Mega Man Battle Network–style
   - Hits are calculated only when `bullet.GridPosition == enemy.GridPosition`.
   - Sprite sizes must not affect hit detection.
 
+## Weapon System
+The fighter equips a weapon that handles primary attacks. Weapons have unique characteristics:
+
+### Weapon Stats
+- **Damage**: Base damage dealt (can have multiple damage types: Physical, Fire, Ice, Electric, Void)
+- **Charge Time**: How quickly a weapon can be charged for heavy attacks
+- **Critical Chance/Multiplier**: Chance for critical hits (yellow/orange/red crits at 100%/200%+ chance)
+- **Fire Rate**: Cooldown between shots
+- **Damage Falloff**: Range where damage decreases (start range, end range, minimum multiplier)
+- **Range**: Maximum distance in tiles
+
+### Current Weapon: Blaster
+The default starting weapon - a reliable energy pistol that rewards skilled timing.
+
+| Stat | Normal Shot | Charged Shot |
+|------|-------------|--------------|
+| Damage | 1 | 5 |
+| Charge Time | - | 0.6s |
+| Fire Cooldown | 0.25s | 0.25s |
+| Crit Chance | 8% | 8% |
+| Range | 6 tiles | 6 tiles |
+| Falloff | None | None |
+
+**Controls:**
+- `Space` (tap): Fire single shot immediately
+- `Space` (hold): Charge up, release for charged shot
+- Releasing early cancels the charge (shorter cooldown)
+
+**Strategy:**
+- Use single shots as filler damage while repositioning
+- Master charge timing for burst damage opportunities
+- Charged shots deal 5x damage - worth the commitment
+
+### Adding New Weapons
+1. Create new file in `src/weapons/` (e.g., `spreader.rs`)
+2. Implement `weapon_stats()` function returning `WeaponStats`
+3. Add variant to `WeaponType` enum in `weapons/mod.rs`
+4. Add match arm in `WeaponType::stats()`
+
 ## Action System
-The fighter has 4 action slots, all implemented. Actions are special abilities with cooldowns.
+The fighter has 3 action slots. Actions are special abilities separate from the equipped weapon.
 
 ### Key bindings
 | Slot | Keyboard | Gamepad (planned) | Action |
 |------|----------|-------------------|--------|
-| 1    | `1`      | A                 | Charged Shot |
-| 2    | `2`      | B                 | Heal |
-| 3    | `3`      | X                 | Shield |
-| 4    | `4`      | Y                 | WideSword |
+| 1    | `1`      | A                 | Heal |
+| 2    | `2`      | B                 | Shield |
+| 3    | `3`      | X                 | WideSword |
 
 ### Current actions
-1. **Charged Shot** (Slot 1, Key `1`)
-   - Requires charge-up time before firing (0.8s)
-   - Deals high damage (25 HP)
-   - 3 second cooldown after use
-   - Visual: Orange projectile, larger than normal bullet
-
-2. **Heal** (Slot 2, Key `2`)
+1. **Heal** (Slot 1, Key `1`)
    - Instant cast (no charge time)
    - Restores 20 HP (capped at max HP)
    - 8 second cooldown (longer to prevent spam)
    - Visual: Green flash on player
 
-3. **Shield** (Slot 3, Key `3`)
+2. **Shield** (Slot 2, Key `2`)
    - Instant activation (no charge time)
    - Blocks all incoming damage for 2 seconds
    - 6 second cooldown after shield expires
    - Visual: Blue semi-transparent shield around player
 
-4. **WideSword** (Slot 4, Key `4`)
+3. **WideSword** (Slot 3, Key `3`)
    - Quick charge time (0.3s)
    - Melee attack hitting the entire column in front of player (all 3 rows)
    - Deals high damage (40 HP)

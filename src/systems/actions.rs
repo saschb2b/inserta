@@ -1,10 +1,15 @@
 use bevy::prelude::*;
 
-use crate::components::*;
+use crate::components::{
+    ActionSlot, ActionState, ActionType, BaseColor, Bullet, ChargedShot, Enemy, EnemyBullet,
+    FlashTimer, GridPosition, Health, HealthText, Lifetime, Player, PlayerHealthText, Shield,
+    WideSwordSlash,
+};
 use crate::constants::*;
 use crate::systems::grid_utils::tile_floor_world;
 
-/// Process action inputs (keys 1-4)
+/// Process action inputs (keys 1-3)
+/// NOTE: Weapon shooting (Space key) is handled by the weapon system
 pub fn action_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
@@ -13,12 +18,11 @@ pub fn action_input(
     mut hp_text_query: Query<&mut Text2d, With<PlayerHealthText>>,
     mut commands: Commands,
 ) {
-    // Key mappings: 1 = ChargedShot, 2 = Heal
+    // Key mappings: 1 = Heal, 2 = Shield, 3 = WideSword
     let keys = [
         (KeyCode::Digit1, 0),
         (KeyCode::Digit2, 1),
         (KeyCode::Digit3, 2),
-        (KeyCode::Digit4, 3),
     ];
 
     for (player_entity, player_pos, mut health) in &mut player_query {
@@ -83,9 +87,6 @@ fn execute_action(
     hp_text_query: &mut Query<&mut Text2d, With<PlayerHealthText>>,
 ) {
     match action.action_type {
-        ActionType::ChargedShot => {
-            spawn_charged_shot(commands, player_pos);
-        }
         ActionType::Heal => {
             apply_heal(commands, player_entity, health, hp_text_query);
         }
@@ -99,29 +100,7 @@ fn execute_action(
     action.start_cooldown();
 }
 
-fn spawn_charged_shot(commands: &mut Commands, player_pos: GridPosition) {
-    commands.spawn((
-        Sprite {
-            color: COLOR_CHARGED_SHOT,
-            custom_size: Some(CHARGED_SHOT_SIZE),
-            ..default()
-        },
-        Transform::default(),
-        GridPosition {
-            x: player_pos.x,
-            y: player_pos.y,
-        },
-        RenderConfig {
-            offset: BULLET_OFFSET,
-            base_z: Z_BULLET + 0.5,
-        },
-        Bullet,
-        ChargedShot {
-            damage: CHARGED_SHOT_DAMAGE,
-        },
-        MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
-    ));
-}
+// NOTE: spawn_charged_shot was removed - charged shots are now handled by the weapon system
 
 fn apply_heal(
     commands: &mut Commands,

@@ -5,6 +5,7 @@ use crate::components::{
     HealthText, Lifetime, MoveTimer, MuzzleFlash, Player, PlayerHealthText, TilePanel,
 };
 use crate::constants::*;
+use crate::weapons::Projectile;
 
 /// Player bullets move right
 pub fn bullet_movement(
@@ -56,12 +57,18 @@ pub fn muzzle_lifetime(
     }
 }
 
-/// Player bullets hit enemies
+/// Legacy bullet hit system - only for non-weapon bullets (e.g., old system bullets without Projectile)
+/// Player projectiles with the Projectile component are handled by weapon::projectile_hit_system
 pub fn bullet_hit_enemy(
     mut commands: Commands,
     bullet_query: Query<
         (Entity, &GridPosition),
-        (With<Bullet>, Without<EnemyBullet>, Without<ChargedShot>),
+        (
+            With<Bullet>,
+            Without<EnemyBullet>,
+            Without<ChargedShot>,
+            Without<Projectile>,
+        ),
     >,
     mut enemy_query: Query<(Entity, &GridPosition, &mut Health, &Children), With<Enemy>>,
     mut text_query: Query<&mut Text2d, With<HealthText>>,

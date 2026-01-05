@@ -4,9 +4,10 @@ mod assets;
 mod components;
 mod constants;
 mod systems;
+mod weapons;
 
-use components::{GameState, InputCooldown, ShootCooldown};
-use constants::{MOVE_COOLDOWN, SHOOT_COOLDOWN};
+use components::{GameState, InputCooldown};
+use constants::MOVE_COOLDOWN;
 use systems::{
     action_ui::update_action_bar_ui,
     actions::{
@@ -23,13 +24,14 @@ use systems::{
     menu::{
         cleanup_menu, handle_menu_selection, setup_menu, update_menu_input, update_menu_visuals,
     },
-    player::{move_player, player_shoot},
+    player::move_player,
     setup::{
         cleanup_arena, cleanup_menu_entities, cleanup_splash_entities, setup_action_bar,
         setup_arena, setup_global, spawn_player_actions,
     },
     splash::{animate_splash, cleanup_splash, setup_splash, update_splash},
 };
+use weapons::WeaponPlugin;
 
 fn main() {
     App::new()
@@ -50,10 +52,8 @@ fn main() {
             MOVE_COOLDOWN,
             TimerMode::Once,
         )))
-        .insert_resource(ShootCooldown(Timer::from_seconds(
-            SHOOT_COOLDOWN,
-            TimerMode::Once,
-        )))
+        // Weapon system plugin
+        .add_plugins(WeaponPlugin)
         // State management
         .init_state::<GameState>()
         // ====================================================================
@@ -101,7 +101,6 @@ fn main() {
             (
                 // Player systems
                 move_player,
-                player_shoot,
                 action_input,
                 // Animation
                 animate_player,

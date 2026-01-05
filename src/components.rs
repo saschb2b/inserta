@@ -35,12 +35,9 @@ impl Default for FighterConfig {
             start_x: 1,
             start_y: 1,
             max_hp: 100,
-            actions: vec![
-                ActionType::ChargedShot,
-                ActionType::Heal,
-                ActionType::Shield,
-                ActionType::WideSword,
-            ],
+            // NOTE: ChargedShot is now part of the weapon system (Blaster)
+            // Actions are special abilities separate from the equipped weapon
+            actions: vec![ActionType::Heal, ActionType::Shield, ActionType::WideSword],
         }
     }
 }
@@ -194,20 +191,21 @@ pub struct EnemyAI {
 #[derive(Resource)]
 pub struct InputCooldown(pub Timer);
 
-#[derive(Resource)]
-pub struct ShootCooldown(pub Timer);
-
 // ============================================================================
 // Action System
 // ============================================================================
 
 /// Types of actions a fighter can perform
+/// NOTE: ChargedShot was removed - it's now handled by the weapon system (Blaster's charged shot)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActionType {
-    ChargedShot,
     Heal,
     Shield,
     WideSword,
+    // Future actions:
+    // AreaBomb,
+    // Dash,
+    // etc.
 }
 
 /// State of an action slot

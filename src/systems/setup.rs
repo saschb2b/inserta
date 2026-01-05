@@ -14,6 +14,7 @@ use crate::components::{
 };
 use crate::constants::*;
 use crate::systems::grid_utils::{tile_center_world, tile_floor_world};
+use crate::weapons::{EquippedWeapon, WeaponState, WeaponType};
 
 /// Simple rectangle mesh
 fn rect_mesh(w: f32, h: f32) -> Mesh {
@@ -393,6 +394,11 @@ pub fn setup_arena(
     // Player (from config)
     // ========================================================================
     let fighter_config = &config.fighter;
+
+    // Create equipped weapon and its state
+    let equipped_weapon = EquippedWeapon::new(WeaponType::Blaster);
+    let weapon_state = WeaponState::new(equipped_weapon.stats.fire_cooldown);
+
     commands.spawn((
         Sprite {
             image: fighter_idle,
@@ -422,6 +428,9 @@ pub fn setup_arena(
             max: fighter_config.max_hp,
         },
         BaseColor(Color::WHITE),
+        // Weapon system components
+        equipped_weapon,
+        weapon_state,
         CleanupOnStateExit(GameState::Playing),
     ));
 
@@ -695,7 +704,6 @@ pub fn setup_action_bar(mut commands: Commands, config: Res<ArenaConfig>) {
 /// Get the icon color for an action type
 fn get_action_icon_color(action_type: &ActionType) -> Color {
     match action_type {
-        ActionType::ChargedShot => COLOR_CHARGED_SHOT_ICON,
         ActionType::Heal => COLOR_HEAL_ICON,
         ActionType::Shield => COLOR_SHIELD_ICON,
         ActionType::WideSword => COLOR_WIDESWORD_ICON,
@@ -730,7 +738,6 @@ pub fn spawn_player_actions(mut commands: Commands, config: Res<ArenaConfig>) {
 /// Get cooldown and charge time for an action type
 fn get_action_timings(action_type: &ActionType) -> (f32, f32) {
     match action_type {
-        ActionType::ChargedShot => (CHARGED_SHOT_COOLDOWN, CHARGED_SHOT_CHARGE_TIME),
         ActionType::Heal => (HEAL_COOLDOWN, HEAL_CHARGE_TIME),
         ActionType::Shield => (SHIELD_COOLDOWN, SHIELD_CHARGE_TIME),
         ActionType::WideSword => (WIDESWORD_COOLDOWN, WIDESWORD_CHARGE_TIME),

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::components::*;
 use crate::constants::*;
 
+/// Player movement system - handles WASD/Arrow key input
 pub fn move_player(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
@@ -46,65 +47,5 @@ pub fn move_player(
     }
 }
 
-pub fn player_shoot(
-    mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
-    mut cooldown: ResMut<ShootCooldown>,
-    query: Query<&GridPosition, With<Player>>,
-) {
-    cooldown.0.tick(time.delta());
-
-    if !cooldown.0.is_finished() {
-        return;
-    }
-
-    if !keyboard_input.pressed(KeyCode::Space) {
-        return;
-    }
-
-    for player_pos in &query {
-        // Spawn bullets from the *tile*, not from sprite size/anchor.
-        commands.spawn((
-            Sprite {
-                color: COLOR_BULLET,
-                custom_size: Some(BULLET_DRAW_SIZE),
-                ..default()
-            },
-            Transform::default(),
-            GridPosition {
-                x: player_pos.x,
-                y: player_pos.y,
-            },
-            RenderConfig {
-                offset: BULLET_OFFSET,
-                base_z: Z_BULLET,
-            },
-            Bullet,
-            MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
-        ));
-
-        // Optional muzzle flash (tile-based)
-        commands.spawn((
-            Sprite {
-                color: COLOR_MUZZLE,
-                custom_size: Some(Vec2::new(22.0, 12.0)),
-                ..default()
-            },
-            Transform::default(),
-            GridPosition {
-                x: player_pos.x,
-                y: player_pos.y,
-            },
-            RenderConfig {
-                offset: MUZZLE_OFFSET,
-                base_z: Z_BULLET + 1.0,
-            },
-            MuzzleFlash,
-            Lifetime(Timer::from_seconds(MUZZLE_TIME, TimerMode::Once)),
-        ));
-
-        cooldown.0.reset();
-        break;
-    }
-}
+// NOTE: Shooting is now handled by the weapon system in src/weapons/mod.rs
+// The player_shoot function has been removed and replaced with weapon_input_system
