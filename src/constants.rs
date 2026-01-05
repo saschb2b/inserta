@@ -54,7 +54,6 @@ pub const FIGHTER_DRAW_SIZE: Vec2 = Vec2::new(340.0, 340.0);
 pub const SLIME_DRAW_SIZE: Vec2 = Vec2::new(128.0, 128.0);
 pub const SLIME_ANCHOR: Vec2 = Vec2::new(0.0, -0.40);
 pub const SLIME_OFFSET: Vec2 = Vec2::new(0.0, -8.0);
-
 // Z layers
 pub const Z_BACKGROUND: f32 = -10.0;
 pub const Z_GRID_LINES: f32 = -5.0;
@@ -78,8 +77,8 @@ pub const DEPTH_Y_TO_Z: f32 = 0.002;
 pub const COLOR_BACKGROUND: Color = Color::srgb(0.05, 0.05, 0.15);
 
 // Cyber grid lines
-pub const COLOR_GRID_LINE: Color = Color::srgba(0.15, 0.25, 0.5, 0.2);
-pub const COLOR_GRID_LINE_BRIGHT: Color = Color::srgba(0.2, 0.35, 0.7, 0.35);
+pub const COLOR_GRID_LINE: Color = Color::srgba(0.15, 0.25, 0.5, 0.12);        // was 0.2
+pub const COLOR_GRID_LINE_BRIGHT: Color = Color::srgba(0.25, 0.45, 0.9, 0.20); // was 0.35
 
 // ============================================================================
 // Player panels - Red/Orange (MMBN style)

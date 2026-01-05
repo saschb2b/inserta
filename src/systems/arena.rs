@@ -180,14 +180,10 @@ pub fn spawn_grid_lines(
     let grid_line_mat = materials.add(ColorMaterial::from(COLOR_GRID_LINE));
     let grid_line_bright_mat = materials.add(ColorMaterial::from(COLOR_GRID_LINE_BRIGHT));
 
-    // Horizontal lines - spaced to cover screen
-    for i in -12..=12 {
-        let y = i as f32 * 40.0 + ARENA_Y_OFFSET;
-        let mat = if i % 3 == 0 {
-            grid_line_bright_mat.clone()
-        } else {
-            grid_line_mat.clone()
-        };
+    // Horizontal lines
+    for i in -10..=10 {
+        let y = i as f32 * 60.0 + ARENA_Y_OFFSET;
+        let mat = if i % 4 == 0 { grid_line_bright_mat.clone() } else { grid_line_mat.clone() };
         commands.spawn((
             Mesh2d(grid_line_h_mesh.clone()),
             MeshMaterial2d(mat),
@@ -196,14 +192,10 @@ pub fn spawn_grid_lines(
         ));
     }
 
-    // Vertical lines - spaced to cover screen
-    for i in -16..=16 {
-        let x = i as f32 * 50.0;
-        let mat = if i % 3 == 0 {
-            grid_line_bright_mat.clone()
-        } else {
-            grid_line_mat.clone()
-        };
+    // Vertical lines
+    for i in -14..=14 {
+        let x = i as f32 * 70.0;
+        let mat = if i % 4 == 0 { grid_line_bright_mat.clone() } else { grid_line_mat.clone() };
         commands.spawn((
             Mesh2d(grid_line_v_mesh.clone()),
             MeshMaterial2d(mat),
