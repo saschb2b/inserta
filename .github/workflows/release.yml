@@ -18,22 +18,24 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust Dependencies
-        uses: swatinem/rust-cache@v2
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          tags: inserta-builder:latest
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Make Build Script Executable
         run: chmod +x build_steam_deck.sh
 
-      - name: Build and Package
-        run: ./build_steam_deck.sh
+      - name: Build and Package (Docker)
+        run: ./build_steam_deck.sh --docker
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1

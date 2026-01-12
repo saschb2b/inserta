@@ -4,8 +4,42 @@ set -e
 APP_NAME="inserta"
 BUILD_DIR="steam_deck_build"
 
-echo "🦀 Building $APP_NAME for Linux (Steam Deck compatible)..."
-cargo build --release
+# Check for Docker flag
+if [ "$1" == "--docker" ]; then
+    echo "🐳 Building in Steam Runtime Docker container..."
+    
+    # Build the builder image
+    docker build -t inserta-builder -f Dockerfile .
+    
+    # Run the build inside the container, mounting the current directory
+    # We map the target directory to avoid re-downloading crates if possible, 
+    # but for a clean release build, a fresh target inside is fine.
+    # We mount the current dir to /app
+    docker run --rm \
+        -v "$(pwd):/app" \
+        -v "inserta-cargo-registry:/usr/local/cargo/registry" \
+        -v "inserta-target:/app/target" \
+        inserta-builder \
+        cargo build --release
+        
+    # Note: The artifact will be in the docker volume 'inserta-target'. 
+    # We need to copy it out.
+    # Actually, simpler approach for script: map the target dir to host, 
+    # but that might have permission issues with root vs user.
+    # Let's run as current user ID to avoid permission issues.
+    
+    docker run --rm \
+        -v "$(pwd):/app" \
+        -u "$(id -u):$(id -g)" \
+        -e "HOME=/tmp" \
+        inserta-builder \
+        cargo build --release --target-dir target
+        
+    echo "🐳 Docker build complete. Proceeding to package..."
+else
+    echo "🦀 Building $APP_NAME for Linux (Native)..."
+    cargo build --release
+fi
 
 echo "📂 Creating build directory..."
 rm -rf "$BUILD_DIR"
