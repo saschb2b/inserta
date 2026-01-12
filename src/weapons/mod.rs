@@ -10,6 +10,7 @@
 
 pub mod blaster;
 
+use crate::resources::PlayerUpgrades;
 use bevy::prelude::*;
 
 // ============================================================================
@@ -193,6 +194,24 @@ pub struct WeaponStats {
     pub charged_projectile_color: Color,
     /// Visual: charged projectile size
     pub charged_projectile_size: Vec2,
+}
+
+impl WeaponStats {
+    /// Apply player upgrades to the base weapon stats
+    pub fn apply_upgrades(&mut self, upgrades: &PlayerUpgrades) {
+        // Apply damage
+        self.damage.amount += upgrades.get_bonus_damage();
+        if let Some(ref mut charged) = self.charged_damage {
+            // Charged shots get double the bonus
+            charged.amount += upgrades.get_bonus_damage() * 2;
+        }
+
+        // Apply crit chance
+        self.critical.chance += upgrades.get_crit_chance_bonus();
+
+        // Apply fire rate (cooldown reduction)
+        self.fire_cooldown *= upgrades.get_cooldown_modifier();
+    }
 }
 
 impl Default for WeaponStats {

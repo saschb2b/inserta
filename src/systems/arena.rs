@@ -183,7 +183,11 @@ pub fn spawn_grid_lines(
     // Horizontal lines
     for i in -10..=10 {
         let y = i as f32 * 60.0 + ARENA_Y_OFFSET;
-        let mat = if i % 4 == 0 { grid_line_bright_mat.clone() } else { grid_line_mat.clone() };
+        let mat = if i % 4 == 0 {
+            grid_line_bright_mat.clone()
+        } else {
+            grid_line_mat.clone()
+        };
         commands.spawn((
             Mesh2d(grid_line_h_mesh.clone()),
             MeshMaterial2d(mat),
@@ -195,7 +199,11 @@ pub fn spawn_grid_lines(
     // Vertical lines
     for i in -14..=14 {
         let x = i as f32 * 70.0;
-        let mat = if i % 4 == 0 { grid_line_bright_mat.clone() } else { grid_line_mat.clone() };
+        let mat = if i % 4 == 0 {
+            grid_line_bright_mat.clone()
+        } else {
+            grid_line_mat.clone()
+        };
         commands.spawn((
             Mesh2d(grid_line_v_mesh.clone()),
             MeshMaterial2d(mat),

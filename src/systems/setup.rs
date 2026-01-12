@@ -11,6 +11,7 @@ use crate::components::{
     PlayerHealthText, RenderConfig, SlimeAnim, SlimeAnimState,
 };
 use crate::constants::*;
+use crate::resources::{PlayerUpgrades, WaveState};
 use crate::systems::arena::spawn_arena_visuals;
 use crate::weapons::{EquippedWeapon, WeaponState, WeaponType};
 
@@ -35,7 +36,11 @@ pub fn setup_arena(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     config: Res<ArenaConfig>,
+    upgrades: Res<PlayerUpgrades>,
+    mut wave_state: ResMut<WaveState>,
 ) {
+    *wave_state = WaveState::Spawning;
+
     // ========================================================================
     // Arena Visuals (background, grid lines, tile panels)
     // ========================================================================
@@ -82,8 +87,12 @@ pub fn setup_arena(
     let fighter_config = &config.fighter;
 
     // Create equipped weapon and its state
-    let equipped_weapon = EquippedWeapon::new(WeaponType::Blaster);
+    let mut equipped_weapon = EquippedWeapon::new(WeaponType::Blaster);
+    equipped_weapon.stats.apply_upgrades(&upgrades);
+
     let weapon_state = WeaponState::new(equipped_weapon.stats.fire_cooldown);
+
+    let max_hp = upgrades.get_max_hp();
 
     commands.spawn((
         Sprite {
@@ -110,8 +119,8 @@ pub fn setup_arena(
         },
         Player,
         Health {
-            current: fighter_config.max_hp,
-            max: fighter_config.max_hp,
+            current: max_hp,
+            max: max_hp,
         },
         BaseColor(Color::WHITE),
         // Weapon system components
@@ -122,7 +131,7 @@ pub fn setup_arena(
 
     // Player HP display (top-left area, above arena)
     commands.spawn((
-        Text2d::new(format!("HP: {}", fighter_config.max_hp)),
+        Text2d::new(format!("HP: {}", max_hp)),
         TextLayout::new_with_justify(Justify::Left),
         TextFont::from_font_size(28.0),
         TextColor(COLOR_TEXT),

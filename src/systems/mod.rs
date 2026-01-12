@@ -9,4 +9,5 @@ pub mod grid_utils;
 pub mod menu;
 pub mod player;
 pub mod setup;
+pub mod shop;
 pub mod splash;

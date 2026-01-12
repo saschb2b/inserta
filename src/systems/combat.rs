@@ -1,11 +1,11 @@
-use bevy::prelude::*;
-
 use crate::components::{
-    BaseColor, Bullet, ChargedShot, Enemy, EnemyBullet, FlashTimer, GridPosition, Health,
-    HealthText, Lifetime, MoveTimer, MuzzleFlash, Player, PlayerHealthText, TilePanel,
+    BaseColor, Bullet, ChargedShot, Enemy, EnemyBullet, FlashTimer, GameState, GridPosition,
+    Health, HealthText, Lifetime, MoveTimer, MuzzleFlash, Player, PlayerHealthText, TilePanel,
 };
 use crate::constants::*;
+use crate::resources::{GameProgress, PlayerCurrency, WaveState};
 use crate::weapons::Projectile;
+use bevy::prelude::*;
 
 /// Player bullets move right
 pub fn bullet_movement(
@@ -198,4 +198,44 @@ fn blend_colors(base: Color, overlay: Color, amount: f32) -> Color {
         base_srgba.blue + (overlay_srgba.blue - base_srgba.blue) * amount * overlay_srgba.alpha,
         base_srgba.alpha,
     )
+}
+
+// ============================================================================
+// Game Loop Systems
+// ============================================================================
+
+/// Transition wave state from Spawning to Active once enemies exist
+pub fn update_wave_state(
+    mut wave_state: ResMut<WaveState>,
+    enemy_query: Query<Entity, With<Enemy>>,
+) {
+    if *wave_state == WaveState::Spawning && !enemy_query.is_empty() {
+        *wave_state = WaveState::Active;
+        info!("Wave Active!");
+    }
+}
+
+/// Check if all enemies are defeated to win the wave
+pub fn check_victory_condition(
+    mut wave_state: ResMut<WaveState>,
+    enemy_query: Query<Entity, With<Enemy>>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut currency: ResMut<PlayerCurrency>,
+    mut progress: ResMut<GameProgress>,
+) {
+    if *wave_state == WaveState::Active && enemy_query.is_empty() {
+        // Victory!
+        *wave_state = WaveState::Cleared;
+
+        // Award currency (base + scaling)
+        let reward = 100 + (progress.current_level as u64 * 50);
+        currency.zenny += reward;
+        info!("Wave Cleared! Reward: {} Zenny", reward);
+
+        // Advance level
+        progress.next_level();
+
+        // Go to shop
+        next_state.set(GameState::Shop);
+    }
 }

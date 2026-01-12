@@ -9,6 +9,7 @@ pub enum GameState {
     #[default]
     Splash,
     MainMenu,
+    Shop,
     Playing,
 }
 

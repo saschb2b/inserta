@@ -3,11 +3,13 @@ use bevy::prelude::*;
 mod assets;
 mod components;
 mod constants;
+mod resources;
 mod systems;
 mod weapons;
 
 use components::{GameState, InputCooldown};
 use constants::MOVE_COOLDOWN;
+use resources::{GameProgress, PlayerCurrency, PlayerUpgrades, WaveState};
 use systems::{
     action_ui::update_action_bar_ui,
     actions::{
@@ -16,8 +18,9 @@ use systems::{
     },
     animation::{animate_player, animate_slime},
     combat::{
-        bullet_hit_enemy, bullet_movement, bullet_tile_highlight, enemy_bullet_hit_player,
-        enemy_bullet_movement, entity_flash, muzzle_lifetime,
+        bullet_hit_enemy, bullet_movement, bullet_tile_highlight, check_victory_condition,
+        enemy_bullet_hit_player, enemy_bullet_movement, entity_flash, muzzle_lifetime,
+        update_wave_state,
     },
     common::update_transforms,
     enemy_ai::{enemy_movement, enemy_shoot},
@@ -28,6 +31,9 @@ use systems::{
     setup::{
         cleanup_arena, cleanup_menu_entities, cleanup_splash_entities, setup_action_bar,
         setup_arena, setup_global, spawn_player_actions,
+    },
+    shop::{
+        cleanup_shop, handle_shop_selection, setup_shop, update_shop_input, update_shop_visuals,
     },
     splash::{animate_splash, cleanup_splash, setup_splash, update_splash},
 };
@@ -52,6 +58,10 @@ fn main() {
             MOVE_COOLDOWN,
             TimerMode::Once,
         )))
+        .init_resource::<PlayerCurrency>()
+        .init_resource::<GameProgress>()
+        .init_resource::<PlayerUpgrades>()
+        .init_resource::<WaveState>()
         // Weapon system plugin
         .add_plugins(WeaponPlugin)
         // State management
@@ -90,6 +100,20 @@ fn main() {
             (cleanup_menu, cleanup_menu_entities),
         )
         // ====================================================================
+        // Shop
+        // ====================================================================
+        .add_systems(OnEnter(GameState::Shop), setup_shop)
+        .add_systems(
+            Update,
+            (
+                update_shop_input,
+                handle_shop_selection,
+                update_shop_visuals,
+            )
+                .run_if(in_state(GameState::Shop)),
+        )
+        .add_systems(OnExit(GameState::Shop), cleanup_shop)
+        // ====================================================================
         // Playing (Arena)
         // ====================================================================
         .add_systems(
@@ -121,6 +145,9 @@ fn main() {
                 charged_shot_hit_enemy,
                 enemy_bullet_hit_player,
                 bullet_tile_highlight,
+                // Game Loop
+                update_wave_state,
+                check_victory_condition,
                 // Shield systems (run before damage)
                 update_shield,
                 shield_blocks_damage,
