@@ -1,0 +1,42 @@
+name: Release Build
+
+on:
+  release:
+    types: [created]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-steam-deck:
+    name: Build for Steam Deck
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to upload assets to the release
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust Dependencies
+        uses: swatinem/rust-cache@v2
+
+      - name: Make Build Script Executable
+        run: chmod +x build_steam_deck.sh
+
+      - name: Build and Package
+        run: ./build_steam_deck.sh
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: inserta_steam_deck.tar.gz
