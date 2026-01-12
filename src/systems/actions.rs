@@ -12,6 +12,7 @@ use crate::systems::grid_utils::tile_floor_world;
 /// NOTE: Weapon shooting (Space key) is handled by the weapon system
 pub fn action_input(
     keyboard: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     time: Res<Time>,
     mut player_query: Query<(Entity, &GridPosition, &mut Health), With<Player>>,
     mut action_query: Query<&mut ActionSlot>,
@@ -23,6 +24,13 @@ pub fn action_input(
         (KeyCode::Digit1, 0),
         (KeyCode::Digit2, 1),
         (KeyCode::Digit3, 2),
+    ];
+
+    // Gamepad mappings: West=Slot1, North=Slot2, East=Slot3
+    let gamepad_buttons = [
+        (GamepadButton::West, 0),
+        (GamepadButton::North, 1),
+        (GamepadButton::East, 2),
     ];
 
     for (player_entity, player_pos, mut health) in &mut player_query {
@@ -54,24 +62,38 @@ pub fn action_input(
             }
 
             // Check for key press
+            let mut triggered = false;
+
+            // Check Keyboard
             for (key, slot_idx) in &keys {
                 if action.slot_index == *slot_idx && keyboard.just_pressed(*key) {
-                    if action.is_ready() {
-                        if action.charge_duration > 0.0 {
-                            // Start charging
-                            action.start_charging();
-                        } else {
-                            // Instant action
-                            execute_action(
-                                &mut commands,
-                                &mut action,
-                                player_entity,
-                                *player_pos,
-                                &mut health,
-                                &mut hp_text_query,
-                            );
-                        }
+                    triggered = true;
+                }
+            }
+
+            // Check Gamepad
+            for gamepad in gamepads.iter() {
+                for (button, slot_idx) in &gamepad_buttons {
+                    if action.slot_index == *slot_idx && gamepad.just_pressed(*button) {
+                        triggered = true;
                     }
+                }
+            }
+
+            if triggered && action.is_ready() {
+                if action.charge_duration > 0.0 {
+                    // Start charging
+                    action.start_charging();
+                } else {
+                    // Instant action
+                    execute_action(
+                        &mut commands,
+                        &mut action,
+                        player_entity,
+                        *player_pos,
+                        &mut health,
+                        &mut hp_text_query,
+                    );
                 }
             }
         }

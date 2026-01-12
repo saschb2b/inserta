@@ -163,25 +163,39 @@ pub fn setup_shop(
 
 pub fn update_shop_input(
     keyboard: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     mut selection: ResMut<ShopSelection>,
     item_count: Res<ShopItemCount>,
 ) {
+    let mut delta = 0;
+
+    // Keyboard
     if keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW) {
-        if selection.0 > 0 {
-            selection.0 -= 1;
-        } else {
-            selection.0 = item_count.0.saturating_sub(1);
-        }
+        delta -= 1;
+    }
+    if keyboard.just_pressed(KeyCode::ArrowDown) || keyboard.just_pressed(KeyCode::KeyS) {
+        delta += 1;
     }
 
-    if keyboard.just_pressed(KeyCode::ArrowDown) || keyboard.just_pressed(KeyCode::KeyS) {
-        selection.0 = (selection.0 + 1) % item_count.0;
+    // Gamepad
+    for gamepad in gamepads.iter() {
+        if gamepad.just_pressed(GamepadButton::DPadUp) {
+            delta -= 1;
+        }
+        if gamepad.just_pressed(GamepadButton::DPadDown) {
+            delta += 1;
+        }
+    }
+    if delta != 0 {
+        let new_selection = (selection.0 as i32 + delta).rem_euclid(item_count.0 as i32);
+        selection.0 = new_selection as usize;
     }
 }
 
 pub fn handle_shop_selection(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     selection: Res<ShopSelection>,
     menu_items: Query<&ShopItem>,
     mut currency: ResMut<PlayerCurrency>,
@@ -189,7 +203,20 @@ pub fn handle_shop_selection(
     mut next_state: ResMut<NextState<GameState>>,
     progress: Res<GameProgress>,
 ) {
+    let mut confirm_pressed = false;
+
     if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::Space) {
+        confirm_pressed = true;
+    }
+
+    for gamepad in gamepads.iter() {
+        if gamepad.just_pressed(GamepadButton::South) || gamepad.just_pressed(GamepadButton::Start)
+        {
+            confirm_pressed = true;
+        }
+    }
+
+    if confirm_pressed {
         for item in &menu_items {
             if item.index == selection.0 {
                 match item.action {

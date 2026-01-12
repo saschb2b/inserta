@@ -145,19 +145,33 @@ pub fn setup_menu(mut commands: Commands) {
 /// Handle menu navigation input
 pub fn update_menu_input(
     keyboard: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     mut selection: ResMut<MenuSelection>,
     item_count: Res<MenuItemCount>,
 ) {
+    let mut delta = 0;
+
+    // Keyboard
     if keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW) {
-        if selection.0 > 0 {
-            selection.0 -= 1;
-        } else {
-            selection.0 = item_count.0.saturating_sub(1);
+        delta -= 1;
+    }
+    if keyboard.just_pressed(KeyCode::ArrowDown) || keyboard.just_pressed(KeyCode::KeyS) {
+        delta += 1;
+    }
+
+    // Gamepad
+    for gamepad in gamepads.iter() {
+        if gamepad.just_pressed(GamepadButton::DPadUp) {
+            delta -= 1;
+        }
+        if gamepad.just_pressed(GamepadButton::DPadDown) {
+            delta += 1;
         }
     }
 
-    if keyboard.just_pressed(KeyCode::ArrowDown) || keyboard.just_pressed(KeyCode::KeyS) {
-        selection.0 = (selection.0 + 1) % item_count.0;
+    if delta != 0 {
+        let new_selection = (selection.0 as i32 + delta).rem_euclid(item_count.0 as i32);
+        selection.0 = new_selection as usize;
     }
 }
 
@@ -165,11 +179,25 @@ pub fn update_menu_input(
 pub fn handle_menu_selection(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     selection: Res<MenuSelection>,
     menu_items: Query<&MenuItem>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
+    let mut confirm_pressed = false;
+
     if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::Space) {
+        confirm_pressed = true;
+    }
+
+    for gamepad in gamepads.iter() {
+        if gamepad.just_pressed(GamepadButton::South) || gamepad.just_pressed(GamepadButton::Start)
+        {
+            confirm_pressed = true;
+        }
+    }
+
+    if confirm_pressed {
         // Find the selected menu item
         for item in &menu_items {
             if item.index == selection.0 {

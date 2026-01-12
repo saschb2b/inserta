@@ -3,9 +3,10 @@ use bevy::prelude::*;
 use crate::components::*;
 use crate::constants::*;
 
-/// Player movement system - handles WASD/Arrow key input
+/// Player movement system - handles WASD/Arrow key input and Gamepad
 pub fn move_player(
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     time: Res<Time>,
     mut cooldown: ResMut<InputCooldown>,
     mut query: Query<&mut GridPosition, With<Player>>,
@@ -19,6 +20,7 @@ pub fn move_player(
     let mut moved = false;
     let mut direction = IVec2::ZERO;
 
+    // Keyboard Input
     if keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::ArrowUp) {
         direction.y += 1;
         moved = true;
@@ -31,6 +33,25 @@ pub fn move_player(
     } else if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) {
         direction.x += 1;
         moved = true;
+    }
+
+    // Gamepad Input (override/add to keyboard)
+    if !moved {
+        for gamepad in gamepads.iter() {
+            if gamepad.pressed(GamepadButton::DPadUp) {
+                direction.y += 1;
+                moved = true;
+            } else if gamepad.pressed(GamepadButton::DPadDown) {
+                direction.y -= 1;
+                moved = true;
+            } else if gamepad.pressed(GamepadButton::DPadLeft) {
+                direction.x -= 1;
+                moved = true;
+            } else if gamepad.pressed(GamepadButton::DPadRight) {
+                direction.x += 1;
+                moved = true;
+            }
+        }
     }
 
     if moved {

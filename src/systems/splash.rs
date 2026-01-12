@@ -79,17 +79,34 @@ pub fn setup_splash(mut commands: Commands) {
 pub fn update_splash(
     mut next_state: ResMut<NextState<GameState>>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     mut timer: ResMut<SplashTimer>,
     time: Res<Time>,
 ) {
     timer.0.tick(time.delta());
 
-    // Advance on timer completion or key press
-    if timer.0.is_finished()
-        || keyboard.just_pressed(KeyCode::Space)
+    let mut input_detected = false;
+
+    // Check keyboard
+    if keyboard.just_pressed(KeyCode::Space)
         || keyboard.just_pressed(KeyCode::Enter)
         || keyboard.just_pressed(KeyCode::Escape)
     {
+        input_detected = true;
+    }
+
+    // Check gamepad
+    for gamepad in gamepads.iter() {
+        if gamepad.just_pressed(GamepadButton::Start)
+            || gamepad.just_pressed(GamepadButton::South)
+            || gamepad.just_pressed(GamepadButton::East)
+        {
+            input_detected = true;
+        }
+    }
+
+    // Advance on timer completion or input
+    if timer.0.is_finished() || input_detected {
         next_state.set(GameState::MainMenu);
     }
 }

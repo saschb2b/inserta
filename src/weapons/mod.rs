@@ -427,13 +427,33 @@ use crate::constants::*;
 pub fn weapon_input_system(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     time: Res<Time>,
     mut query: Query<(&GridPosition, &EquippedWeapon, &mut WeaponState), With<Player>>,
 ) {
     for (player_pos, weapon, mut state) in &mut query {
-        let fire_pressed = keyboard.just_pressed(KeyCode::Space);
-        let fire_held = keyboard.pressed(KeyCode::Space);
-        let fire_released = keyboard.just_released(KeyCode::Space);
+        let mut fire_pressed = keyboard.just_pressed(KeyCode::Space);
+        let mut fire_held = keyboard.pressed(KeyCode::Space);
+        let mut fire_released = keyboard.just_released(KeyCode::Space);
+
+        // Gamepad Input
+        for gamepad in gamepads.iter() {
+            if gamepad.just_pressed(GamepadButton::South)
+                || gamepad.just_pressed(GamepadButton::RightTrigger2)
+            {
+                fire_pressed = true;
+            }
+            if gamepad.pressed(GamepadButton::South)
+                || gamepad.pressed(GamepadButton::RightTrigger2)
+            {
+                fire_held = true;
+            }
+            if gamepad.just_released(GamepadButton::South)
+                || gamepad.just_released(GamepadButton::RightTrigger2)
+            {
+                fire_released = true;
+            }
+        }
 
         state.fire_held = fire_held;
 

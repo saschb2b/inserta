@@ -4,7 +4,13 @@ This repo is a small Bevy (Rust) prototype for a Mega Man Battle Network–style
 
 ## Quick commands
 - Run: `cargo run`
-- Compile check: `cargo check`
+- Compile check: `cargo check` (RUN THIS AFTER EVERY CHANGE)
+
+## Development Workflow
+1. **Make Changes**: Edit code as requested.
+2. **Verify Compilation**: IMMEDIATELY run `cargo check` to catch syntax errors or type mismatches.
+3. **Fix Errors**: If `cargo check` fails, fix the errors before proceeding.
+4. **Verify Behavior**: Run `cargo run` to ensure runtime behavior is correct.
 
 ## Project structure
 - `src/main.rs`: App wiring (plugins + system scheduling)
