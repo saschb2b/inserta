@@ -24,17 +24,13 @@ use systems::{
     },
     common::update_transforms,
     enemy_ai::{enemy_movement, enemy_shoot},
-    menu::{
-        cleanup_menu, handle_menu_selection, setup_menu, update_menu_input, update_menu_visuals,
-    },
+    menu::{cleanup_menu, handle_menu_selection, setup_menu, update_menu_visuals},
     player::move_player,
     setup::{
         cleanup_arena, cleanup_menu_entities, cleanup_splash_entities, setup_action_bar,
         setup_arena, setup_global, spawn_player_actions,
     },
-    shop::{
-        cleanup_shop, handle_shop_selection, setup_shop, update_shop_input, update_shop_visuals,
-    },
+    shop::{cleanup_shop, handle_shop_interaction, setup_shop, update_shop_visuals},
     splash::{animate_splash, cleanup_splash, setup_splash, update_splash},
 };
 use weapons::WeaponPlugin;
@@ -88,12 +84,7 @@ fn main() {
         .add_systems(OnEnter(GameState::MainMenu), setup_menu)
         .add_systems(
             Update,
-            (
-                update_menu_input,
-                handle_menu_selection,
-                update_menu_visuals,
-            )
-                .run_if(in_state(GameState::MainMenu)),
+            (handle_menu_selection, update_menu_visuals).run_if(in_state(GameState::MainMenu)),
         )
         .add_systems(
             OnExit(GameState::MainMenu),
@@ -105,12 +96,7 @@ fn main() {
         .add_systems(OnEnter(GameState::Shop), setup_shop)
         .add_systems(
             Update,
-            (
-                update_shop_input,
-                handle_shop_selection,
-                update_shop_visuals,
-            )
-                .run_if(in_state(GameState::Shop)),
+            (handle_shop_interaction, update_shop_visuals).run_if(in_state(GameState::Shop)),
         )
         .add_systems(OnExit(GameState::Shop), cleanup_shop)
         // ====================================================================

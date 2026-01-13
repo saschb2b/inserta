@@ -1,9 +1,9 @@
 use bevy::prelude::*;
+use bevy::ui::RepeatedGridTrack;
 
 use crate::components::{
     ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyType, FighterConfig, GameState,
 };
-use crate::constants::*;
 use crate::resources::{GameProgress, PlayerCurrency, PlayerUpgrades};
 
 // ============================================================================
@@ -23,21 +23,10 @@ pub enum ShopAction {
 }
 
 #[derive(Component)]
-pub struct ShopItem {
-    pub index: usize,
-    pub action: ShopAction,
-}
+pub struct ShopButtonAction(pub ShopAction);
 
 #[derive(Component)]
-pub struct ShopText {
-    pub action: ShopAction,
-}
-
-#[derive(Resource)]
-pub struct ShopSelection(pub usize);
-
-#[derive(Resource)]
-pub struct ShopItemCount(pub usize);
+pub struct ShopButtonText(pub ShopAction);
 
 // ============================================================================
 // Setup
@@ -48,299 +37,290 @@ pub fn setup_shop(
     currency: Res<PlayerCurrency>,
     progress: Res<GameProgress>,
 ) {
-    // Background
-    commands.spawn((
-        Sprite {
-            color: Color::srgb(0.05, 0.05, 0.15),
-            custom_size: Some(Vec2::new(SCREEN_WIDTH + 200.0, SCREEN_HEIGHT + 200.0)),
-            ..default()
-        },
-        Transform::from_xyz(0.0, 0.0, 0.0),
-        ShopMenu,
-        CleanupOnStateExit(GameState::Shop),
-    ));
-
-    // Title
-    commands.spawn((
-        Text2d::new("DATA SHOP"),
-        TextFont::from_font_size(60.0),
-        TextColor(Color::srgb(0.4, 0.9, 0.6)),
-        Transform::from_xyz(0.0, 300.0, 1.0),
-        ShopMenu,
-        CleanupOnStateExit(GameState::Shop),
-    ));
-
-    // Currency Display
-    commands.spawn((
-        Text2d::new(format!("ZENNY: {}", currency.zenny)),
-        TextFont::from_font_size(40.0),
-        TextColor(Color::srgb(1.0, 0.9, 0.2)),
-        Transform::from_xyz(0.0, 240.0, 1.0),
-        ShopMenu,
-        CleanupOnStateExit(GameState::Shop),
-    ));
-
-    // Wave Info
-    commands.spawn((
-        Text2d::new(format!("Next Wave: {}", progress.current_level + 1)),
-        TextFont::from_font_size(24.0),
-        TextColor(Color::srgb(0.7, 0.7, 0.7)),
-        Transform::from_xyz(0.0, 200.0, 1.0),
-        ShopMenu,
-        CleanupOnStateExit(GameState::Shop),
-    ));
-
-    let menu_items = vec![
-        ShopAction::UpgradeDamage,
-        ShopAction::UpgradeHealth,
-        ShopAction::UpgradeFireRate,
-        ShopAction::UpgradeCritChance,
-        ShopAction::NextBattle,
-    ];
-
-    let item_count = menu_items.len();
-    let start_y = 100.0;
-    let item_spacing = 80.0;
-
-    for (i, action) in menu_items.into_iter().enumerate() {
-        let y = start_y - (i as f32 * item_spacing);
-        let is_next_battle = action == ShopAction::NextBattle;
-
-        // Background Highlight
-        commands.spawn((
-            Sprite {
-                color: Color::srgba(0.3, 0.5, 0.8, 0.0),
-                custom_size: Some(Vec2::new(600.0, 60.0)),
+    // Root Node
+    commands
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                flex_direction: FlexDirection::Column,
                 ..default()
             },
-            Transform::from_xyz(0.0, y, 0.5),
+            BackgroundColor(Color::srgb(0.05, 0.05, 0.15)),
             ShopMenu,
-            ShopItem { index: i, action },
             CleanupOnStateExit(GameState::Shop),
-        ));
+        ))
+        .with_children(|parent| {
+            // Title
+            parent.spawn((
+                Text::new("DATA SHOP"),
+                TextFont::from_font_size(60.0),
+                TextColor(Color::srgb(0.4, 0.9, 0.6)),
+                Node {
+                    margin: UiRect::bottom(Val::Px(20.0)),
+                    ..default()
+                },
+            ));
 
-        // Text
-        let label = if is_next_battle {
-            "INITIATE BATTLE".to_string()
-        } else {
-            "Upgrade ...".to_string() // Placeholder, updated in update_visuals
-        };
+            // Currency Display
+            parent.spawn((
+                Text::new(format!("ZENNY: {}", currency.zenny)),
+                TextFont::from_font_size(40.0),
+                TextColor(Color::srgb(1.0, 0.9, 0.2)),
+                Node {
+                    margin: UiRect::bottom(Val::Px(10.0)),
+                    ..default()
+                },
+            ));
 
-        let color = if is_next_battle {
-            Color::srgb(0.9, 0.5, 0.5)
-        } else {
-            Color::srgb(0.8, 0.8, 0.8)
-        };
+            // Wave Info
+            parent.spawn((
+                Text::new(format!("Next Wave: {}", progress.current_level + 1)),
+                TextFont::from_font_size(24.0),
+                TextColor(Color::srgb(0.7, 0.7, 0.7)),
+                Node {
+                    margin: UiRect::bottom(Val::Px(40.0)),
+                    ..default()
+                },
+            ));
 
-        commands.spawn((
-            Text2d::new(label),
-            TextFont::from_font_size(32.0),
-            TextColor(color),
-            Transform::from_xyz(0.0, y, 1.0),
-            ShopMenu,
-            ShopText { action },
-            CleanupOnStateExit(GameState::Shop),
-        ));
-    }
+            // Shop Items Container (Grid-like)
+            parent
+                .spawn(Node {
+                    display: Display::Grid,
+                    // 2 columns, equal width
+                    grid_template_columns: vec![RepeatedGridTrack::flex(2, 1.0)],
+                    // 3 rows, equal height
+                    grid_template_rows: vec![RepeatedGridTrack::flex(3, 1.0)],
+                    row_gap: Val::Px(20.0),
+                    column_gap: Val::Px(20.0),
+                    justify_items: JustifyItems::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                })
+                .with_children(|grid| {
+                    let actions = [
+                        ShopAction::UpgradeDamage,
+                        ShopAction::UpgradeHealth,
+                        ShopAction::UpgradeFireRate,
+                        ShopAction::UpgradeCritChance,
+                    ];
 
-    // Instructions
-    commands.spawn((
-        Text2d::new("UP/DOWN to select  |  ENTER/SPACE to buy/start"),
-        TextFont::from_font_size(18.0),
-        TextColor(Color::srgba(0.6, 0.6, 0.6, 0.8)),
-        Transform::from_xyz(0.0, -300.0, 1.0),
-        ShopMenu,
-        CleanupOnStateExit(GameState::Shop),
-    ));
+                    for action in actions {
+                        grid.spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(400.0),
+                                height: Val::Px(80.0),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                border: UiRect::all(Val::Px(2.0)),
+                                ..default()
+                            },
+                            BorderColor::all(Color::WHITE),
+                            BackgroundColor(Color::srgb(0.3, 0.5, 0.8)),
+                            ShopButtonAction(action),
+                        ))
+                        .with_children(|btn| {
+                            btn.spawn((
+                                Text::new("Upgrade ..."),
+                                TextFont::from_font_size(24.0),
+                                TextColor(Color::WHITE),
+                                ShopButtonText(action),
+                            ));
+                        });
+                    }
+                });
 
-    commands.insert_resource(ShopSelection(0));
-    commands.insert_resource(ShopItemCount(item_count));
+            // Next Battle Button (Separate)
+            parent
+                .spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(400.0),
+                        height: Val::Px(80.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::top(Val::Px(40.0)),
+                        border: UiRect::all(Val::Px(2.0)),
+                        ..default()
+                    },
+                    BorderColor::all(Color::WHITE),
+                    BackgroundColor(Color::srgb(0.9, 0.5, 0.5)),
+                    ShopButtonAction(ShopAction::NextBattle),
+                ))
+                .with_children(|btn| {
+                    btn.spawn((
+                        Text::new("INITIATE BATTLE"),
+                        TextFont::from_font_size(32.0),
+                        TextColor(Color::WHITE),
+                        ShopButtonText(ShopAction::NextBattle),
+                    ));
+                });
+        });
 }
 
 // ============================================================================
 // Update
 // ============================================================================
 
-pub fn update_shop_input(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    gamepads: Query<&Gamepad>,
-    mut selection: ResMut<ShopSelection>,
-    item_count: Res<ShopItemCount>,
-) {
-    let mut delta = 0;
-
-    // Keyboard
-    if keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW) {
-        delta -= 1;
-    }
-    if keyboard.just_pressed(KeyCode::ArrowDown) || keyboard.just_pressed(KeyCode::KeyS) {
-        delta += 1;
-    }
-
-    // Gamepad
-    for gamepad in gamepads.iter() {
-        if gamepad.just_pressed(GamepadButton::DPadUp) {
-            delta -= 1;
-        }
-        if gamepad.just_pressed(GamepadButton::DPadDown) {
-            delta += 1;
-        }
-    }
-    if delta != 0 {
-        let new_selection = (selection.0 as i32 + delta).rem_euclid(item_count.0 as i32);
-        selection.0 = new_selection as usize;
-    }
-}
-
-pub fn handle_shop_selection(
+pub fn handle_shop_interaction(
     mut commands: Commands,
-    keyboard: Res<ButtonInput<KeyCode>>,
-    gamepads: Query<&Gamepad>,
-    selection: Res<ShopSelection>,
-    menu_items: Query<&ShopItem>,
+    interaction_query: Query<
+        (&Interaction, &ShopButtonAction),
+        (Changed<Interaction>, With<Button>),
+    >,
     mut currency: ResMut<PlayerCurrency>,
     mut upgrades: ResMut<PlayerUpgrades>,
     mut next_state: ResMut<NextState<GameState>>,
     progress: Res<GameProgress>,
 ) {
-    let mut confirm_pressed = false;
-
-    if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::Space) {
-        confirm_pressed = true;
-    }
-
-    for gamepad in gamepads.iter() {
-        if gamepad.just_pressed(GamepadButton::South) || gamepad.just_pressed(GamepadButton::Start)
-        {
-            confirm_pressed = true;
-        }
-    }
-
-    if confirm_pressed {
-        for item in &menu_items {
-            if item.index == selection.0 {
-                match item.action {
-                    ShopAction::UpgradeDamage => {
-                        let cost = upgrades.cost_damage();
-                        if currency.zenny >= cost {
-                            currency.zenny -= cost;
-                            upgrades.damage_level += 1;
-                        }
-                    }
-                    ShopAction::UpgradeHealth => {
-                        let cost = upgrades.cost_health();
-                        if currency.zenny >= cost {
-                            currency.zenny -= cost;
-                            upgrades.health_level += 1;
-                        }
-                    }
-                    ShopAction::UpgradeFireRate => {
-                        let cost = upgrades.cost_fire_rate();
-                        if currency.zenny >= cost {
-                            currency.zenny -= cost;
-                            upgrades.fire_rate_level += 1;
-                        }
-                    }
-                    ShopAction::UpgradeCritChance => {
-                        let cost = upgrades.cost_crit_chance();
-                        if currency.zenny >= cost {
-                            currency.zenny -= cost;
-                            upgrades.crit_chance_level += 1;
-                        }
-                    }
-                    ShopAction::NextBattle => {
-                        start_battle(&mut commands, &progress);
-                        next_state.set(GameState::Playing);
+    for (interaction, shop_action) in &interaction_query {
+        if *interaction == Interaction::Pressed {
+            match shop_action.0 {
+                ShopAction::UpgradeDamage => {
+                    let cost = upgrades.cost_damage();
+                    if currency.zenny >= cost {
+                        currency.zenny -= cost;
+                        upgrades.damage_level += 1;
                     }
                 }
-                break;
+                ShopAction::UpgradeHealth => {
+                    let cost = upgrades.cost_health();
+                    if currency.zenny >= cost {
+                        currency.zenny -= cost;
+                        upgrades.health_level += 1;
+                    }
+                }
+                ShopAction::UpgradeFireRate => {
+                    let cost = upgrades.cost_fire_rate();
+                    if currency.zenny >= cost {
+                        currency.zenny -= cost;
+                        upgrades.fire_rate_level += 1;
+                    }
+                }
+                ShopAction::UpgradeCritChance => {
+                    let cost = upgrades.cost_crit_chance();
+                    if currency.zenny >= cost {
+                        currency.zenny -= cost;
+                        upgrades.crit_chance_level += 1;
+                    }
+                }
+                ShopAction::NextBattle => {
+                    start_battle(&mut commands, &progress);
+                    next_state.set(GameState::Playing);
+                }
             }
         }
     }
 }
 
 pub fn update_shop_visuals(
-    selection: Res<ShopSelection>,
-    mut item_query: Query<(&ShopItem, &mut Sprite)>,
-    mut text_query: Query<(&ShopText, &mut Text2d, &mut TextColor)>,
+    // Update button colors based on interaction and affordability
+    mut button_query: Query<
+        (
+            &Interaction,
+            &mut BackgroundColor,
+            &mut BorderColor,
+            &ShopButtonAction,
+        ),
+        With<Button>,
+    >,
+    // Update text content and color
+    mut text_query: Query<(&mut Text, &mut TextColor, &ShopButtonText)>,
     upgrades: Res<PlayerUpgrades>,
     currency: Res<PlayerCurrency>,
-    time: Res<Time>,
 ) {
-    let t = time.elapsed_secs();
-    let pulse = 0.2 + 0.1 * (t * 10.0).sin();
+    // Helper to check affordability
+    let can_afford = |action: ShopAction| -> bool {
+        match action {
+            ShopAction::UpgradeDamage => currency.zenny >= upgrades.cost_damage(),
+            ShopAction::UpgradeHealth => currency.zenny >= upgrades.cost_health(),
+            ShopAction::UpgradeFireRate => currency.zenny >= upgrades.cost_fire_rate(),
+            ShopAction::UpgradeCritChance => currency.zenny >= upgrades.cost_crit_chance(),
+            ShopAction::NextBattle => true,
+        }
+    };
 
-    // Update Highlight
-    for (item, mut sprite) in &mut item_query {
-        if item.index == selection.0 {
-            sprite.color = Color::srgba(0.3, 0.5, 0.8, pulse);
-        } else {
-            sprite.color = Color::srgba(0.3, 0.5, 0.8, 0.0);
+    // Update Buttons
+    for (interaction, mut bg, mut border, action) in &mut button_query {
+        let affordable = can_afford(action.0);
+
+        match interaction {
+            Interaction::Pressed => {
+                bg.0 = Color::srgb(0.2, 0.4, 0.7);
+                *border = BorderColor::all(Color::srgb(0.8, 0.8, 0.8));
+            }
+            Interaction::Hovered => {
+                // Dim if not affordable
+                if affordable {
+                    bg.0 = Color::srgb(0.4, 0.6, 0.9);
+                    *border = BorderColor::all(Color::WHITE);
+                } else {
+                    bg.0 = Color::srgb(0.3, 0.3, 0.3); // Dim red/grey
+                    *border = BorderColor::all(Color::srgb(0.5, 0.2, 0.2));
+                }
+            }
+            Interaction::None => {
+                if affordable {
+                    if action.0 == ShopAction::NextBattle {
+                        bg.0 = Color::srgb(0.9, 0.5, 0.5);
+                    } else {
+                        bg.0 = Color::srgb(0.3, 0.5, 0.8);
+                    }
+                    *border = BorderColor::all(Color::NONE);
+                } else {
+                    bg.0 = Color::srgb(0.2, 0.2, 0.2);
+                    *border = BorderColor::all(Color::NONE);
+                }
+            }
         }
     }
 
-    // Update Text Content and Color (Affordability)
-    for (shop_text, mut text, mut color) in &mut text_query {
-        let (label, _cost, can_afford) = match shop_text.action {
-            ShopAction::UpgradeDamage => {
-                let cost = upgrades.cost_damage();
-                (
-                    format!("Damage Lv.{} ({} Z)", upgrades.damage_level, cost),
-                    cost,
-                    currency.zenny >= cost,
-                )
-            }
-            ShopAction::UpgradeHealth => {
-                let cost = upgrades.cost_health();
-                (
-                    format!("Max HP Lv.{} ({} Z)", upgrades.health_level, cost),
-                    cost,
-                    currency.zenny >= cost,
-                )
-            }
-            ShopAction::UpgradeFireRate => {
-                let cost = upgrades.cost_fire_rate();
-                (
-                    format!("Fire Rate Lv.{} ({} Z)", upgrades.fire_rate_level, cost),
-                    cost,
-                    currency.zenny >= cost,
-                )
-            }
-            ShopAction::UpgradeCritChance => {
-                let cost = upgrades.cost_crit_chance();
-                (
-                    format!("Crit Chance Lv.{} ({} Z)", upgrades.crit_chance_level, cost),
-                    cost,
-                    currency.zenny >= cost,
-                )
-            }
-            ShopAction::NextBattle => ("INITIATE BATTLE".to_string(), 0, true),
+    // Update Text
+    for (mut text, mut color, text_action) in &mut text_query {
+        let (label, cost) = match text_action.0 {
+            ShopAction::UpgradeDamage => (
+                format!("Damage Lv.{}", upgrades.damage_level),
+                upgrades.cost_damage(),
+            ),
+            ShopAction::UpgradeHealth => (
+                format!("Max HP Lv.{}", upgrades.health_level),
+                upgrades.cost_health(),
+            ),
+            ShopAction::UpgradeFireRate => (
+                format!("Fire Rate Lv.{}", upgrades.fire_rate_level),
+                upgrades.cost_fire_rate(),
+            ),
+            ShopAction::UpgradeCritChance => (
+                format!("Crit Chance Lv.{}", upgrades.crit_chance_level),
+                upgrades.cost_crit_chance(),
+            ),
+            ShopAction::NextBattle => ("INITIATE BATTLE".to_string(), 0),
         };
 
-        text.0 = label;
-
-        if shop_text.action != ShopAction::NextBattle {
-            if can_afford {
+        if text_action.0 == ShopAction::NextBattle {
+            text.0 = label;
+            color.0 = Color::WHITE;
+        } else {
+            text.0 = format!("{} ({} Z)", label, cost);
+            if currency.zenny >= cost {
                 color.0 = Color::WHITE;
             } else {
-                color.0 = Color::srgb(0.5, 0.5, 0.5); // Greyed out
+                color.0 = Color::srgb(0.5, 0.5, 0.5);
             }
         }
     }
 }
 
-pub fn cleanup_shop(mut commands: Commands, query: Query<(Entity, &CleanupOnStateExit)>) {
-    // Remove resources
-    commands.remove_resource::<ShopSelection>();
-    commands.remove_resource::<ShopItemCount>();
-
-    // Despawn shop entities
-    for (entity, scoped) in &query {
-        if scoped.0 == GameState::Shop {
-            commands.entity(entity).despawn();
-        }
+pub fn cleanup_shop(mut commands: Commands, query: Query<Entity, With<ShopMenu>>) {
+    for entity in &query {
+        commands.entity(entity).despawn();
     }
 }
+
 fn start_battle(commands: &mut Commands, progress: &GameProgress) {
     // Scale enemy HP based on level
     let base_hp = 100;
