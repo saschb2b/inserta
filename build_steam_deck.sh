@@ -11,29 +11,21 @@ if [ "$1" == "--docker" ]; then
     # Build the builder image
     docker build -t inserta-builder -f Dockerfile .
     
-    # Run the build inside the container, mounting the current directory
-    # We map the target directory to avoid re-downloading crates if possible, 
-    # but for a clean release build, a fresh target inside is fine.
-    # We mount the current dir to /app
-    docker run --rm \
-        -v "$(pwd):/app" \
-        -v "inserta-cargo-registry:/usr/local/cargo/registry" \
-        -v "inserta-target:/app/target" \
-        inserta-builder \
-        cargo build --release
-        
-    # Note: The artifact will be in the docker volume 'inserta-target'. 
-    # We need to copy it out.
-    # Actually, simpler approach for script: map the target dir to host, 
-    # but that might have permission issues with root vs user.
-    # Let's run as current user ID to avoid permission issues.
+    # Run the build inside the container
+    # We map the current directory to /app
+    # We run as the host user to avoid permission issues with generated files
+    # We redirect CARGO_HOME and HOME to directories inside target/ so the user has write access
+    
+    mkdir -p target/cargo
+    mkdir -p target/home
     
     docker run --rm \
         -v "$(pwd):/app" \
         -u "$(id -u):$(id -g)" \
-        -e "HOME=/tmp" \
+        -e "HOME=/app/target/home" \
+        -e "CARGO_HOME=/app/target/cargo" \
         inserta-builder \
-        cargo build --release --target-dir target
+        cargo build --release
         
     echo "🐳 Docker build complete. Proceeding to package..."
 else
