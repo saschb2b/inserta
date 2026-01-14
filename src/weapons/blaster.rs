@@ -33,7 +33,7 @@ pub mod constants {
 
     // Projectile
     pub const BLASTER_RANGE: i32 = 6; // Full arena width
-    pub const BLASTER_PROJECTILE_SPEED: f32 = 20.0;
+    pub const BLASTER_PROJECTILE_SPEED: f32 = 8.33; // ~120ms per tile (matches BULLET_MOVE_TIMER)
     pub const BLASTER_PROJECTILE_SIZE: Vec2 = Vec2::new(16.0, 16.0);
     pub const BLASTER_CHARGED_SIZE: Vec2 = Vec2::new(28.0, 28.0);
 

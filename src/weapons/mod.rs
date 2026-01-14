@@ -225,7 +225,7 @@ impl Default for WeaponStats {
             fire_cooldown: 0.35,
             falloff: FalloffConfig::default(),
             range: 6,
-            projectile_speed: 20.0, // tiles per second
+            projectile_speed: 8.33, // tiles per second (matches 0.12s move timer)
             projectile_size: Vec2::new(18.0, 18.0),
             projectile_color: Color::srgb(1.0, 0.95, 0.2), // Yellow
             charged_projectile_color: Color::srgb(1.0, 0.5, 0.1), // Orange

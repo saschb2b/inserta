@@ -40,7 +40,9 @@ pub const CHARACTER_OFFSET: Vec2 = Vec2::new(0.0, 0.0);
 
 // Bullets (scaled up proportionally)
 pub const BULLET_OFFSET: Vec2 = Vec2::new(110.0, 110.0);
-pub const BULLET_MOVE_TIMER: f32 = 0.05; // Slightly faster for larger arena
+// MMBN speed: ~6-8 frames per tile at 60 FPS (approx 0.10 - 0.133s)
+// We use 0.12s (approx 7.2 frames) for parity with standard attacks
+pub const BULLET_MOVE_TIMER: f32 = 0.12;
 pub const BULLET_DRAW_SIZE: Vec2 = Vec2::new(18.0, 18.0);
 
 // Muzzle flash
