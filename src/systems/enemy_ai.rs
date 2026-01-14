@@ -43,29 +43,55 @@ pub fn enemy_movement(
 pub fn enemy_shoot(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(&GridPosition, &mut EnemyAI), With<Enemy>>,
+    mut query: Query<(&GridPosition, &mut EnemyAI, &mut Sprite, &BaseColor), With<Enemy>>,
 ) {
-    for (pos, mut ai) in &mut query {
-        ai.shoot_timer.tick(time.delta());
+    for (pos, mut ai, mut sprite, base_color) in &mut query {
+        // Check if we are currently charging a shot
+        if let Some(timer) = &mut ai.charge_timer {
+            timer.tick(time.delta());
 
-        if ai.shoot_timer.is_finished() {
-            // Spawn enemy bullet traveling left
-            commands.spawn((
-                Sprite {
-                    color: Color::srgb(0.9, 0.2, 0.3), // Red bullet for enemy
-                    custom_size: Some(BULLET_DRAW_SIZE),
-                    ..default()
-                },
-                Transform::default(),
-                GridPosition { x: pos.x, y: pos.y },
-                RenderConfig {
-                    offset: Vec2::new(-BULLET_OFFSET.x, BULLET_OFFSET.y), // Offset to the left
-                    base_z: Z_BULLET,
-                },
-                Bullet,
-                EnemyBullet,
-                MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
-            ));
+            // Visual feedback: rapid flashing during charge
+            // Use sine wave for smooth pulsing or modulo for strobe
+            let t = timer.elapsed_secs();
+            if (t * 30.0).sin() > 0.0 {
+                sprite.color = Color::srgb(1.0, 0.3, 0.3); // Bright red warning
+            } else {
+                sprite.color = base_color.0;
+            }
+
+            // Charge complete? Fire!
+            if timer.is_finished() {
+                // Spawn enemy bullet traveling left
+                commands.spawn((
+                    Sprite {
+                        color: Color::srgb(0.9, 0.2, 0.3), // Red bullet for enemy
+                        custom_size: Some(BULLET_DRAW_SIZE),
+                        ..default()
+                    },
+                    Transform::default(),
+                    GridPosition { x: pos.x, y: pos.y },
+                    RenderConfig {
+                        offset: Vec2::new(-BULLET_OFFSET.x, BULLET_OFFSET.y), // Offset to the left
+                        base_z: Z_BULLET,
+                    },
+                    Bullet,
+                    EnemyBullet,
+                    MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
+                ));
+
+                // Reset state
+                ai.charge_timer = None;
+                ai.shoot_timer.reset(); // Restart the cooldown timer
+                sprite.color = base_color.0; // Restore original color
+            }
+        } else {
+            // Not charging, tick the cooldown
+            ai.shoot_timer.tick(time.delta());
+
+            if ai.shoot_timer.is_finished() {
+                // Cooldown done, start charging
+                ai.charge_timer = Some(Timer::from_seconds(ENEMY_CHARGE_TIME, TimerMode::Once));
+            }
         }
     }
 }

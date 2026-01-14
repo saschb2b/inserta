@@ -234,6 +234,7 @@ fn spawn_slime(
             EnemyAI {
                 move_timer: Timer::from_seconds(ENEMY_MOVE_COOLDOWN, TimerMode::Repeating),
                 shoot_timer: Timer::from_seconds(ENEMY_SHOOT_COOLDOWN, TimerMode::Repeating),
+                charge_timer: None,
             },
             BaseColor(Color::WHITE),
             CleanupOnStateExit(GameState::Playing),

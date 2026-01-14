@@ -134,6 +134,7 @@ pub const MOVE_COOLDOWN: f32 = 0.15;
 // Enemy AI timing
 pub const ENEMY_MOVE_COOLDOWN: f32 = 1.2; // Time between enemy moves
 pub const ENEMY_SHOOT_COOLDOWN: f32 = 2.0; // Time between enemy shots
+pub const ENEMY_CHARGE_TIME: f32 = 0.5; // Startup telegraph before shooting
 
 pub const FLASH_TIME: f32 = 0.08;
 pub const MUZZLE_TIME: f32 = 0.06;

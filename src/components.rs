@@ -187,6 +187,7 @@ pub struct PlayerHealthText;
 pub struct EnemyAI {
     pub move_timer: Timer,
     pub shoot_timer: Timer,
+    pub charge_timer: Option<Timer>,
 }
 
 #[derive(Resource)]
