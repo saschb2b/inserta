@@ -6,6 +6,7 @@ pub mod combat;
 pub mod common;
 pub mod enemy_ai;
 pub mod grid_utils;
+pub mod growth;
 pub mod menu;
 pub mod player;
 pub mod setup;

@@ -24,13 +24,13 @@ use systems::{
     },
     common::update_transforms,
     enemy_ai::{enemy_movement, enemy_shoot},
+    growth::{GrowthTreeState, cleanup_growth, setup_growth_tree, update_growth_tree},
     menu::{cleanup_menu, handle_menu_selection, setup_menu, update_menu_visuals},
     player::move_player,
     setup::{
         cleanup_arena, cleanup_menu_entities, cleanup_splash_entities, setup_action_bar,
         setup_arena, setup_global, spawn_player_actions,
     },
-    shop::{cleanup_shop, handle_shop_interaction, setup_shop, update_shop_visuals},
     splash::{animate_splash, cleanup_splash, setup_splash, update_splash},
 };
 use weapons::WeaponPlugin;
@@ -58,6 +58,7 @@ fn main() {
         .init_resource::<GameProgress>()
         .init_resource::<PlayerUpgrades>()
         .init_resource::<WaveState>()
+        .init_resource::<GrowthTreeState>()
         // Weapon system plugin
         .add_plugins(WeaponPlugin)
         // State management
@@ -91,14 +92,11 @@ fn main() {
             (cleanup_menu, cleanup_menu_entities),
         )
         // ====================================================================
-        // Shop
+        // Shop / Growth Tree
         // ====================================================================
-        .add_systems(OnEnter(GameState::Shop), setup_shop)
-        .add_systems(
-            Update,
-            (handle_shop_interaction, update_shop_visuals).run_if(in_state(GameState::Shop)),
-        )
-        .add_systems(OnExit(GameState::Shop), cleanup_shop)
+        .add_systems(OnEnter(GameState::Shop), setup_growth_tree)
+        .add_systems(Update, update_growth_tree.run_if(in_state(GameState::Shop)))
+        .add_systems(OnExit(GameState::Shop), cleanup_growth)
         // ====================================================================
         // Playing (Arena)
         // ====================================================================
