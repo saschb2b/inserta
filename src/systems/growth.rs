@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rand::Rng;
 use std::collections::HashSet;
 
 use crate::components::{
@@ -484,6 +485,35 @@ fn start_battle(commands: &mut Commands, progress: &GameProgress) {
     let hp_per_level = 50;
     let enemy_hp = base_hp + (progress.current_level as i32 * hp_per_level);
 
+    // Determine number of enemies (1 to 3 based on level)
+    let enemy_count = (1 + (progress.current_level / 3)).min(3);
+
+    let mut enemies = Vec::new();
+    let mut rng = rand::thread_rng();
+
+    // Possible rows: 0, 1, 2
+    let mut available_rows = vec![0, 1, 2];
+
+    for _ in 0..enemy_count {
+        if available_rows.is_empty() {
+            break;
+        }
+
+        // Pick a random row to avoid overlap
+        let index = rng.gen_range(0..available_rows.len());
+        let row = available_rows.remove(index);
+
+        // Vary column slightly (4 or 5)
+        let col = rng.gen_range(4..=5);
+
+        enemies.push(EnemyConfig {
+            enemy_type: EnemyType::Slime,
+            start_x: col,
+            start_y: row,
+            max_hp: enemy_hp,
+        });
+    }
+
     let config = ArenaConfig {
         fighter: FighterConfig {
             start_x: 1,
@@ -491,12 +521,7 @@ fn start_battle(commands: &mut Commands, progress: &GameProgress) {
             max_hp: 100, // This is overridden by PlayerUpgrades in setup_arena
             actions: vec![ActionType::Heal, ActionType::Shield, ActionType::WideSword],
         },
-        enemies: vec![EnemyConfig {
-            enemy_type: EnemyType::Slime,
-            start_x: 4,
-            start_y: 1,
-            max_hp: enemy_hp,
-        }],
+        enemies,
     };
     commands.insert_resource(config);
 }
