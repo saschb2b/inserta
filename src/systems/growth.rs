@@ -410,7 +410,7 @@ pub fn update_growth_tree(
         let is_unlocked = tree_state.unlocked_nodes.contains(&data.id);
         let is_parent_unlocked = data
             .parent_id
-            .map_or(true, |pid| tree_state.unlocked_nodes.contains(&pid));
+            .is_none_or(|pid| tree_state.unlocked_nodes.contains(&pid));
         let can_afford = currency.zenny >= data.cost;
         let is_purchasable = !is_unlocked && is_parent_unlocked;
 
@@ -489,7 +489,7 @@ fn start_battle(commands: &mut Commands, progress: &GameProgress) {
     let enemy_count = (1 + (progress.current_level / 3)).min(3);
 
     let mut enemies = Vec::new();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     // Possible rows: 0, 1, 2
     let mut available_rows = vec![0, 1, 2];
@@ -500,11 +500,11 @@ fn start_battle(commands: &mut Commands, progress: &GameProgress) {
         }
 
         // Pick a random row to avoid overlap
-        let index = rng.gen_range(0..available_rows.len());
+        let index = rng.random_range(0..available_rows.len());
         let row = available_rows.remove(index);
 
         // Vary column slightly (4 or 5)
-        let col = rng.gen_range(4..=5);
+        let col = rng.random_range(4..=5);
 
         enemies.push(EnemyConfig {
             enemy_type: EnemyType::Slime,

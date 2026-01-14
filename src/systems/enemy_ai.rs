@@ -30,7 +30,7 @@ pub fn enemy_movement(
             let new_y = pos.y + dy;
 
             // Constrain to enemy territory (right side of grid)
-            if new_x >= PLAYER_AREA_WIDTH && new_x < GRID_WIDTH && new_y >= 0 && new_y < GRID_HEIGHT
+            if (PLAYER_AREA_WIDTH..GRID_WIDTH).contains(&new_x) && (0..GRID_HEIGHT).contains(&new_y)
             {
                 pos.x = new_x;
                 pos.y = new_y;

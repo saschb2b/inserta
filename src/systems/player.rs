@@ -59,7 +59,7 @@ pub fn move_player(
             let new_x = pos.x + direction.x;
             let new_y = pos.y + direction.y;
 
-            if new_y >= 0 && new_y < GRID_HEIGHT && new_x >= 0 && new_x < PLAYER_AREA_WIDTH {
+            if (0..GRID_HEIGHT).contains(&new_y) && (0..PLAYER_AREA_WIDTH).contains(&new_x) {
                 pos.x = new_x;
                 pos.y = new_y;
                 cooldown.0.reset();

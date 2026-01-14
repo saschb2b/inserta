@@ -24,7 +24,7 @@ impl GameProgress {
 }
 
 /// Persistent stats that can be upgraded
-#[derive(Resource, Debug, Clone, Copy)]
+#[derive(Resource, Debug, Clone, Copy, Default)]
 pub struct PlayerUpgrades {
     /// Weapon base damage upgrade count
     pub damage_level: u32,
@@ -42,17 +42,6 @@ pub enum WaveState {
     Spawning,
     Active,
     Cleared,
-}
-
-impl Default for PlayerUpgrades {
-    fn default() -> Self {
-        Self {
-            damage_level: 0,
-            health_level: 0,
-            fire_rate_level: 0,
-            crit_chance_level: 0,
-        }
-    }
 }
 
 impl PlayerUpgrades {

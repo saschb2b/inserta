@@ -245,7 +245,7 @@ fn spawn_widesword_slash(commands: &mut Commands, player_pos: GridPosition) {
     let target_x = player_pos.x + 1;
 
     // If target column is outside enemy area, still spawn visual but no hits
-    let hit_tiles: Vec<(i32, i32)> = if target_x >= PLAYER_AREA_WIDTH && target_x < GRID_WIDTH {
+    let hit_tiles: Vec<(i32, i32)> = if (PLAYER_AREA_WIDTH..GRID_WIDTH).contains(&target_x) {
         (0..GRID_HEIGHT).map(|y| (target_x, y)).collect()
     } else {
         vec![]

@@ -1,3 +1,9 @@
+#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_range_contains)]
+
 use bevy::prelude::*;
 
 mod assets;

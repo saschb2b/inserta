@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use crate::components::{
     ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyType, FighterConfig, GameState,
 };
-use crate::constants::*;
 
 /// Marker for the main menu container
 #[derive(Component)]
