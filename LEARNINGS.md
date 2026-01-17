@@ -144,6 +144,82 @@ Refs:
 - src/enemies/components.rs:ChargingTelegraph
 - src/systems/animation.rs:130 (Without filters)
 
+### DEC-005: Sprite-based tiles with lip overlap
+Status: accepted
+
+Summary: Render arena tiles using PNG sprites with a "lip" that overlaps
+the row below, rather than procedurally generated meshes.
+
+Context:
+- Original tiles used complex mesh generation (rounded rects, frames, highlights).
+- Wanted artist-friendly tile customization via PNG assets.
+- MMBN tiles have a 3D lip effect where front rows partially obscure back rows.
+
+Decision:
+- Use PNG tile sprites (`tile_red.png`, `tile_blue.png`) at 240x190 pixels.
+- Bottom 48px is the "lip" that overlaps the tile below.
+- `TILE_VISIBLE_HEIGHT = TILE_ASSET_HEIGHT - TILE_LIP_HEIGHT` for row spacing.
+- Render back rows first (higher y) so front rows overlap correctly via z-ordering.
+- Character floor point is at the center of the visible area (above lip).
+
+Alternatives:
+- Keep procedural meshes: Harder to customize visually.
+- 3D rendering: Overkill for 2D game.
+- No overlap: Loses the 3D depth effect.
+
+Consequences:
+- Artists can edit tiles in any image editor.
+- Tile dimensions are configurable via constants.
+- Z-ordering critical: back rows must render first.
+- Character positioning requires accounting for lip offset.
+
+Refs:
+- src/constants.rs:23-49 (tile asset constants)
+- src/systems/grid_utils.rs (tile positioning functions)
+- src/systems/arena.rs:spawn_tile_panels()
+- assets/battle/arena/tile_red.png, tile_blue.png
+
+---
+
+### DEC-006: Responsive arena scaling via ArenaLayout resource
+Status: accepted
+
+Summary: Use an `ArenaLayout` resource computed from window dimensions to make
+the arena fill the screen width while maintaining tile aspect ratio.
+
+Context:
+- Arena was hardcoded to 1280x800 resolution.
+- Needed tiles to fill full screen width regardless of window size.
+- Character and effect sizes should scale proportionally.
+
+Decision:
+- Create `ArenaLayout` resource with computed tile dimensions.
+- Tile width = screen_width / GRID_WIDTH (fills screen).
+- Scale factor = tile_width / TILE_ASSET_WIDTH.
+- All other dimensions scaled by this factor.
+- Layout computed at arena setup from window dimensions.
+- Systems use `ArenaLayout` methods for world positions.
+
+Alternatives:
+- Camera zoom: Doesn't truly fill width, may cut off edges.
+- Multiple resolution presets: Tedious, not truly responsive.
+- Letterboxing: Wastes screen space.
+
+Consequences:
+- Arena always fills screen width.
+- Tile aspect ratio preserved (no stretching).
+- Characters and effects scale proportionally.
+- Layout must be passed to spawn functions.
+- Need to handle window resize for runtime changes (TODO).
+
+Refs:
+- src/resources.rs:ArenaLayout
+- src/systems/setup.rs:52-58 (layout initialization)
+- src/systems/common.rs:update_transforms()
+- src/systems/arena.rs:spawn_tile_panels()
+
+---
+
 ## Interfaces
 
 ### INT-001: EnemyBlueprint
@@ -258,6 +334,32 @@ Invariants:
 Refs:
 - src/enemies/behaviors.rs:88-165
 
+---
+
+### INT-005: TargetsTiles
+Summary: Component for entities that highlight tiles they target.
+
+```rust
+pub struct TargetsTiles {
+    pub tiles: Vec<(i32, i32)>,      // Explicit tiles (for multi-tile attacks)
+    pub use_grid_position: bool,     // If true, use entity's GridPosition
+}
+
+impl TargetsTiles {
+    pub fn single() -> Self;                      // Use GridPosition
+    pub fn multiple(tiles: Vec<(i32, i32)>) -> Self;  // Use explicit list
+}
+```
+
+Invariants:
+- If `use_grid_position` is true, entity must have `GridPosition` component.
+- If `use_grid_position` is false, `tiles` should be non-empty.
+- Tiles outside the grid are safely ignored by the highlight system.
+
+Refs:
+- src/components.rs:TargetsTiles
+- src/systems/combat.rs:tile_attack_highlight()
+
 ## Patterns
 
 ### PAT-001: Component insertion in batches to avoid tuple limits
@@ -348,6 +450,40 @@ Refs:
 - src/enemies/behaviors.rs:62-66
 - src/enemies/behaviors.rs:167-174
 
+---
+
+### PAT-004: Smooth texture transitions via intensity tracking
+Summary: Use an intensity component to smoothly transition between texture
+variants (e.g., normal/highlighted) with fade effects.
+
+Details:
+- Store `intensity` (current) and `target` (desired) in a component.
+- Each frame, move intensity toward target at a constant speed.
+- Swap textures at a threshold (e.g., 50% intensity).
+- Apply alpha fade during transition for visual smoothness.
+
+```rust
+#[derive(Component)]
+pub struct TileHighlightState {
+    pub intensity: f32,  // 0.0 = normal, 1.0 = highlighted
+    pub target: f32,
+    pub is_player_side: bool,
+}
+
+// In system:
+highlight.target = if has_bullet { 1.0 } else { 0.0 };
+let direction = (highlight.target - highlight.intensity).signum();
+highlight.intensity += direction * FADE_SPEED * dt;
+highlight.intensity = highlight.intensity.clamp(0.0, 1.0);
+
+let use_highlighted = highlight.intensity > 0.5;
+sprite.image = if use_highlighted { highlighted_tex } else { normal_tex };
+```
+
+Refs:
+- src/components.rs:TileHighlightState
+- src/systems/combat.rs:bullet_tile_highlight()
+
 ## Gotchas
 
 ### GCH-001: Bevy query conflicts are detected at system initialization
@@ -428,6 +564,8 @@ Details:
 - Expected files per enemy: `IDLE.png`, `ATTACK.png` (optional), `DEAD.png`
   (optional).
 - Audio: `assets/audio/bgm/`
+- Arena tiles: `assets/battle/arena/tile_red.png`, `tile_blue.png`
+  (240x190 pixels, 48px lip at bottom)
 
 Refs:
 - AGENTS.md:139-142

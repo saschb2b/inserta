@@ -193,6 +193,36 @@ pub struct TilePanel {
 #[derive(Component)]
 pub struct TileBaseColor(pub Color);
 
+/// Tracks the highlight state of a tile for smooth transitions
+#[derive(Component)]
+pub struct TileHighlightState {
+    /// Current highlight intensity (0.0 = normal, 1.0 = fully highlighted)
+    pub intensity: f32,
+    /// Target intensity (what we're transitioning to)
+    pub target: f32,
+    /// Whether this is a player-side tile (red) or enemy-side (blue)
+    pub is_player_side: bool,
+}
+
+impl TileHighlightState {
+    pub fn new(is_player_side: bool) -> Self {
+        Self {
+            intensity: 0.0,
+            target: 0.0,
+            is_player_side,
+        }
+    }
+}
+
+/// Resource holding tile texture assets for normal and highlighted states
+#[derive(Resource)]
+pub struct TileAssets {
+    pub red_normal: Handle<Image>,
+    pub red_highlighted: Handle<Image>,
+    pub blue_normal: Handle<Image>,
+    pub blue_highlighted: Handle<Image>,
+}
+
 /// Player health display text marker
 #[derive(Component)]
 pub struct PlayerHealthText;
@@ -313,6 +343,41 @@ pub struct Shield {
 pub struct WideSwordSlash {
     pub damage: i32,
     pub hit_tiles: Vec<(i32, i32)>, // (x, y) tiles that will be hit
+}
+
+// ============================================================================
+// Tile Targeting System
+// ============================================================================
+
+/// Component for entities that target/highlight specific tiles.
+/// Used by the tile highlight system to show which tiles are being attacked.
+///
+/// For single-tile attacks (bullets), use `TargetsTiles::single()`.
+/// For multi-tile attacks (WideSword), use `TargetsTiles::multiple()`.
+#[derive(Component)]
+pub struct TargetsTiles {
+    /// The tiles being targeted. If empty, uses the entity's GridPosition.
+    pub tiles: Vec<(i32, i32)>,
+    /// If true, uses GridPosition instead of explicit tiles list
+    pub use_grid_position: bool,
+}
+
+impl TargetsTiles {
+    /// Target a single tile (uses the entity's GridPosition)
+    pub fn single() -> Self {
+        Self {
+            tiles: Vec::new(),
+            use_grid_position: true,
+        }
+    }
+
+    /// Target multiple specific tiles
+    pub fn multiple(tiles: Vec<(i32, i32)>) -> Self {
+        Self {
+            tiles,
+            use_grid_position: false,
+        }
+    }
 }
 
 // ============================================================================

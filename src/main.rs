@@ -26,8 +26,8 @@ use systems::{
     },
     animation::{animate_player, animate_slime},
     combat::{
-        bullet_hit_enemy, bullet_movement, bullet_tile_highlight, check_victory_condition,
-        enemy_bullet_hit_player, enemy_bullet_movement, entity_flash, muzzle_lifetime,
+        bullet_hit_enemy, bullet_movement, check_victory_condition, enemy_bullet_hit_player,
+        enemy_bullet_movement, entity_flash, muzzle_lifetime, tile_attack_highlight,
         update_wave_state,
     },
     common::update_transforms,
@@ -145,7 +145,7 @@ fn main() {
                 bullet_hit_enemy,
                 charged_shot_hit_enemy,
                 enemy_bullet_hit_player,
-                bullet_tile_highlight,
+                tile_attack_highlight,
                 // Game Loop
                 update_wave_state,
                 check_victory_condition,

@@ -15,7 +15,7 @@ use crate::enemies::{
     BehaviorEnemy, EnemyAnimState, EnemyAttack, EnemyBlueprint, EnemyMovement, EnemyStats,
     EnemyTraitContainer,
 };
-use crate::resources::{PlayerUpgrades, WaveState};
+use crate::resources::{ArenaLayout, PlayerUpgrades, WaveState};
 use crate::systems::arena::spawn_arena_visuals;
 use crate::weapons::{EquippedWeapon, WeaponState, WeaponType};
 
@@ -42,13 +42,30 @@ pub fn setup_arena(
     config: Res<ArenaConfig>,
     upgrades: Res<PlayerUpgrades>,
     mut wave_state: ResMut<WaveState>,
+    windows: Query<&Window>,
 ) {
     *wave_state = WaveState::Spawning;
 
     // ========================================================================
+    // Compute Arena Layout from window size
+    // ========================================================================
+    let layout = windows
+        .iter()
+        .next()
+        .map(|window| ArenaLayout::from_screen_size(window.width(), window.height()))
+        .unwrap_or_default();
+    commands.insert_resource(layout.clone());
+
+    // ========================================================================
     // Arena Visuals (background, grid lines, tile panels)
     // ========================================================================
-    spawn_arena_visuals(&mut commands, &mut meshes, &mut materials);
+    spawn_arena_visuals(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &asset_server,
+        &layout,
+    );
 
     // ========================================================================
     // BGM
@@ -103,7 +120,7 @@ pub fn setup_arena(
             image: fighter_idle,
             texture_atlas: Some(fighter_layout.into()),
             color: Color::WHITE,
-            custom_size: Some(FIGHTER_DRAW_SIZE),
+            custom_size: Some(layout.scale_vec2(FIGHTER_DRAW_SIZE)),
             ..default()
         },
         Anchor(FIGHTER_ANCHOR),
@@ -191,6 +208,7 @@ pub fn setup_arena(
             &slime_idle,
             &slime_idle_layout,
             0, // TODO: Pass wave level for HP scaling
+            &layout,
         );
     }
 }
@@ -202,8 +220,9 @@ fn spawn_enemy(
     config: &EnemyConfig,
     // For now, pass slime sprites - will be generalized later
     texture: &Handle<Image>,
-    layout: &Handle<TextureAtlasLayout>,
+    atlas_layout: &Handle<TextureAtlasLayout>,
     wave_level: i32,
+    arena_layout: &ArenaLayout,
 ) {
     // Get the blueprint for this enemy type
     let blueprint = EnemyBlueprint::get(config.enemy_id);
@@ -218,12 +237,12 @@ fn spawn_enemy(
 
     let enemy_entity = commands
         .spawn((
-            // Sprite setup from blueprint visuals
+            // Sprite setup from blueprint visuals (scaled to arena)
             Sprite {
                 image: texture.clone(),
-                texture_atlas: Some(layout.clone().into()),
+                texture_atlas: Some(atlas_layout.clone().into()),
                 color: Color::WHITE,
-                custom_size: Some(visuals.draw_size),
+                custom_size: Some(arena_layout.scale_vec2(visuals.draw_size)),
                 flip_x: visuals.flip_x,
                 ..default()
             },

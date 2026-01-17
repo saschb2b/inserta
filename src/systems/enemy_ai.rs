@@ -98,6 +98,7 @@ pub fn enemy_shoot(
                     Bullet,
                     EnemyBullet,
                     MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
+                    TargetsTiles::single(), // Highlight tile at projectile's position
                 ));
 
                 // Reset state

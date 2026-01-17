@@ -419,7 +419,7 @@ impl Plugin for WeaponPlugin {
 
 use crate::components::{
     Bullet, Enemy, FlashTimer, GridPosition, Health, HealthText, Lifetime, MoveTimer, MuzzleFlash,
-    Player, RenderConfig,
+    Player, RenderConfig, TargetsTiles,
 };
 use crate::constants::*;
 
@@ -562,6 +562,7 @@ fn spawn_projectile(
             max_range: stats.range,
         },
         MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
+        TargetsTiles::single(), // Highlight tile at bullet's position
     ));
 
     // Muzzle flash

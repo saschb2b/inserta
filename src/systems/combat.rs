@@ -1,9 +1,13 @@
 use crate::components::{
     BaseColor, Bullet, ChargedShot, Enemy, EnemyBullet, FlashTimer, GameState, GridPosition,
-    Health, HealthText, Lifetime, MoveTimer, MuzzleFlash, Player, PlayerHealthText, TilePanel,
+    Health, HealthText, Lifetime, MoveTimer, MuzzleFlash, Player, PlayerHealthText, TargetsTiles,
+    TileAssets, TileHighlightState, TilePanel,
 };
 use crate::constants::*;
 use crate::resources::{GameProgress, PlayerCurrency, WaveState};
+
+/// Speed of highlight fade in/out (intensity units per second)
+const HIGHLIGHT_FADE_SPEED: f32 = 8.0;
 use crate::weapons::Projectile;
 use bevy::prelude::*;
 
@@ -150,54 +154,102 @@ pub fn entity_flash(
     }
 }
 
-/// Highlights tiles that have bullets on them
-pub fn bullet_tile_highlight(
-    player_bullet_query: Query<&GridPosition, (With<Bullet>, Without<EnemyBullet>)>,
-    enemy_bullet_query: Query<&GridPosition, With<EnemyBullet>>,
-    mut tile_query: Query<(&TilePanel, &MeshMaterial2d<ColorMaterial>)>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+/// Highlights tiles that are being targeted by attacks with smooth fade transitions
+///
+/// This system:
+/// 1. Collects all targeted tiles from entities with TargetsTiles component
+/// 2. Sets target highlight intensity based on tile being targeted
+/// 3. Smoothly transitions intensity toward target
+/// 4. Swaps between normal/highlighted textures based on intensity
+pub fn tile_attack_highlight(
+    time: Res<Time>,
+    tile_assets: Option<Res<TileAssets>>,
+    targeting_query: Query<(&TargetsTiles, Option<&GridPosition>)>,
+    mut tile_query: Query<(&TilePanel, &mut TileHighlightState, &mut Sprite)>,
 ) {
-    // Collect all tile positions that have bullets (both player and enemy)
-    let mut bullet_positions: Vec<(i32, i32)> = player_bullet_query
-        .iter()
-        .map(|pos| (pos.x, pos.y))
-        .collect();
-    bullet_positions.extend(enemy_bullet_query.iter().map(|pos| (pos.x, pos.y)));
+    // Skip if tile assets aren't loaded yet
+    let Some(assets) = tile_assets else {
+        return;
+    };
 
-    // Update tile materials based on bullet presence
-    for (tile, material_handle) in &mut tile_query {
-        let has_bullet = bullet_positions.contains(&(tile.x, tile.y));
+    // Collect all targeted tile positions from entities with TargetsTiles
+    let mut targeted_positions: Vec<(i32, i32)> = Vec::new();
 
-        if let Some(material) = materials.get_mut(&material_handle.0) {
-            let is_player_side = tile.x < PLAYER_AREA_WIDTH;
-            let base_color = if is_player_side {
-                COLOR_PLAYER_PANEL_TOP
-            } else {
-                COLOR_ENEMY_PANEL_TOP
-            };
-
-            if has_bullet {
-                // Blend with yellow highlight
-                material.color = blend_colors(base_color, COLOR_BULLET_HIGHLIGHT, 0.6);
-            } else {
-                // Restore base color
-                material.color = base_color;
+    for (targets, grid_pos) in &targeting_query {
+        if targets.use_grid_position {
+            // Use entity's GridPosition (for bullets, single-target attacks)
+            if let Some(pos) = grid_pos {
+                targeted_positions.push((pos.x, pos.y));
             }
+        } else {
+            // Use explicit tiles list (for multi-tile attacks like WideSword)
+            targeted_positions.extend(targets.tiles.iter().copied());
         }
     }
-}
 
-/// Blends two colors together
-fn blend_colors(base: Color, overlay: Color, amount: f32) -> Color {
-    let base_srgba = base.to_srgba();
-    let overlay_srgba = overlay.to_srgba();
+    let dt = time.delta_secs();
 
-    Color::srgba(
-        base_srgba.red + (overlay_srgba.red - base_srgba.red) * amount * overlay_srgba.alpha,
-        base_srgba.green + (overlay_srgba.green - base_srgba.green) * amount * overlay_srgba.alpha,
-        base_srgba.blue + (overlay_srgba.blue - base_srgba.blue) * amount * overlay_srgba.alpha,
-        base_srgba.alpha,
-    )
+    // Update each tile's highlight state and texture
+    for (tile, mut highlight, mut sprite) in &mut tile_query {
+        let is_targeted = targeted_positions.contains(&(tile.x, tile.y));
+
+        // Set target based on whether tile is being attacked
+        highlight.target = if is_targeted { 1.0 } else { 0.0 };
+
+        // Smoothly transition intensity toward target
+        if highlight.intensity != highlight.target {
+            let direction = if highlight.target > highlight.intensity {
+                1.0
+            } else {
+                -1.0
+            };
+            highlight.intensity += direction * HIGHLIGHT_FADE_SPEED * dt;
+            highlight.intensity = highlight.intensity.clamp(0.0, 1.0);
+
+            // Snap to target if close enough
+            if (highlight.intensity - highlight.target).abs() < 0.01 {
+                highlight.intensity = highlight.target;
+            }
+        }
+
+        // Choose texture based on intensity threshold (swap at 50%)
+        let use_highlighted = highlight.intensity > 0.5;
+
+        let (normal_tex, highlighted_tex) = if highlight.is_player_side {
+            (&assets.red_normal, &assets.red_highlighted)
+        } else {
+            (&assets.blue_normal, &assets.blue_highlighted)
+        };
+
+        let desired_texture = if use_highlighted {
+            highlighted_tex
+        } else {
+            normal_tex
+        };
+
+        // Only update if texture changed
+        if sprite.image != *desired_texture {
+            sprite.image = desired_texture.clone();
+        }
+
+        // Apply fade effect via alpha for smooth transition
+        // When transitioning, fade alpha based on how close we are to the swap point
+        let alpha = if highlight.intensity > 0.0 && highlight.intensity < 1.0 {
+            // During transition: pulse slightly for visual interest
+            let fade_factor = if use_highlighted {
+                // Fading in highlighted: start dimmer, get brighter
+                0.7 + 0.3 * (highlight.intensity - 0.5).abs() * 2.0
+            } else {
+                // Fading out to normal: start slightly dim at boundary
+                0.85 + 0.15 * (0.5 - highlight.intensity).max(0.0) * 2.0
+            };
+            fade_factor
+        } else {
+            1.0
+        };
+
+        sprite.color = Color::srgba(1.0, 1.0, 1.0, alpha);
+    }
 }
 
 // ============================================================================

@@ -2,7 +2,7 @@
 //!
 //! This module handles all arena visual rendering:
 //! - Background and cyber grid lines
-//! - MMBN-style tile panels (outer frame, inner frame, surface, highlights)
+//! - MMBN-style tile panels (sprites with responsive scaling)
 //!
 //! Tile styling can be customized by modifying the panel colors in constants.rs
 //! or by adjusting the mesh generation functions here.
@@ -11,9 +11,9 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 
-use crate::components::{CleanupOnStateExit, GameState, TilePanel};
+use crate::components::{CleanupOnStateExit, GameState, TileAssets, TileHighlightState, TilePanel};
 use crate::constants::*;
-use crate::systems::grid_utils::{tile_center_world, tile_floor_world};
+use crate::resources::ArenaLayout;
 
 // ============================================================================
 // Mesh Helpers
@@ -157,11 +157,14 @@ pub fn frame_mesh(outer_w: f32, outer_h: f32, inner_w: f32, inner_h: f32, corner
 // ============================================================================
 
 /// Spawns the arena background (deep cyber void)
-pub fn spawn_background(commands: &mut Commands) {
+pub fn spawn_background(commands: &mut Commands, layout: &ArenaLayout) {
     commands.spawn((
         Sprite {
             color: COLOR_BACKGROUND,
-            custom_size: Some(Vec2::new(SCREEN_WIDTH + 200.0, SCREEN_HEIGHT + 200.0)),
+            custom_size: Some(Vec2::new(
+                layout.screen_width + 200.0,
+                layout.screen_height + 200.0,
+            )),
             ..default()
         },
         Transform::from_xyz(0.0, 0.0, Z_BACKGROUND),
@@ -174,15 +177,16 @@ pub fn spawn_grid_lines(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
+    layout: &ArenaLayout,
 ) {
-    let grid_line_h_mesh = meshes.add(Rectangle::new(SCREEN_WIDTH + 100.0, 1.5));
-    let grid_line_v_mesh = meshes.add(Rectangle::new(1.5, SCREEN_HEIGHT + 100.0));
+    let grid_line_h_mesh = meshes.add(Rectangle::new(layout.screen_width + 100.0, 1.5));
+    let grid_line_v_mesh = meshes.add(Rectangle::new(1.5, layout.screen_height + 100.0));
     let grid_line_mat = materials.add(ColorMaterial::from(COLOR_GRID_LINE));
     let grid_line_bright_mat = materials.add(ColorMaterial::from(COLOR_GRID_LINE_BRIGHT));
 
     // Horizontal lines
     for i in -10..=10 {
-        let y = i as f32 * 60.0 + ARENA_Y_OFFSET;
+        let y = i as f32 * 60.0 + layout.arena_y_offset;
         let mat = if i % 4 == 0 {
             grid_line_bright_mat.clone()
         } else {
@@ -207,186 +211,59 @@ pub fn spawn_grid_lines(
         commands.spawn((
             Mesh2d(grid_line_v_mesh.clone()),
             MeshMaterial2d(mat),
-            Transform::from_xyz(x, ARENA_Y_OFFSET, Z_GRID_LINES),
+            Transform::from_xyz(x, layout.arena_y_offset, Z_GRID_LINES),
             CleanupOnStateExit(GameState::Playing),
         ));
     }
 }
 
-/// Spawns all MMBN-style tile panels for the arena grid
+/// Spawns all MMBN-style tile panels for the arena grid using sprite assets
 pub fn spawn_tile_panels(
     commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
+    asset_server: &Res<AssetServer>,
+    layout: &ArenaLayout,
 ) {
-    // Panel dimensions (scaled for 1280x800)
-    let panel_w = TILE_W;
-    let panel_h = TILE_H;
-    let frame_thickness = 10.0;
-    let inner_w = panel_w - frame_thickness * 2.0;
-    let inner_h = panel_h - frame_thickness * 2.0;
-    let corner_radius = 12.0;
+    // Load all tile sprite assets (normal and highlighted variants)
+    let tile_assets = TileAssets {
+        red_normal: asset_server.load("battle/arena/tile_red.png"),
+        red_highlighted: asset_server.load("battle/arena/tile_red_highlighted.png"),
+        blue_normal: asset_server.load("battle/arena/tile_blue.png"),
+        blue_highlighted: asset_server.load("battle/arena/tile_blue_highlighted.png"),
+    };
 
-    // Meshes
-    let outer_frame_mesh = meshes.add(rounded_rect_mesh(panel_w, panel_h, corner_radius));
-    let inner_frame_mesh = meshes.add(frame_mesh(
-        panel_w - 2.0,
-        panel_h - 2.0,
-        inner_w,
-        inner_h,
-        corner_radius,
-    ));
-    let inner_panel_mesh = meshes.add(rounded_rect_mesh(
-        inner_w - 4.0,
-        inner_h - 4.0,
-        corner_radius * 0.5,
-    ));
-    let highlight_mesh = meshes.add(rect_mesh(inner_w - 20.0, 8.0));
-    let front_face_mesh = meshes.add(rect_mesh(panel_w, PANEL_DEPTH));
+    // Spawn grid panels - render from back row (y=2) to front row (y=0)
+    // so that front rows overlap back rows correctly
+    for y in (0..GRID_HEIGHT).rev() {
+        for x in 0..GRID_WIDTH {
+            let is_player = x < PLAYER_AREA_WIDTH;
+            let tile_texture = if is_player {
+                tile_assets.red_normal.clone()
+            } else {
+                tile_assets.blue_normal.clone()
+            };
 
-    // Player panel colors (red/orange like MMBN)
-    let player_outer_mat = materials.add(ColorMaterial::from(COLOR_PLAYER_PANEL_DARK));
-    let player_frame_mat = materials.add(ColorMaterial::from(COLOR_PLAYER_PANEL_FRAME));
-    let player_front_mat = materials.add(ColorMaterial::from(COLOR_PLAYER_PANEL_SIDE));
+            let sprite_pos = layout.tile_sprite_world(x, y);
 
-    // Enemy panel colors (blue like MMBN)
-    let enemy_outer_mat = materials.add(ColorMaterial::from(COLOR_ENEMY_PANEL_DARK));
-    let enemy_frame_mat = materials.add(ColorMaterial::from(COLOR_ENEMY_PANEL_FRAME));
-    let enemy_front_mat = materials.add(ColorMaterial::from(COLOR_ENEMY_PANEL_SIDE));
+            // Z-ordering: back rows behind front rows
+            // Higher y = further back = lower z
+            let z = Z_PANEL_TOP - (y as f32) * 0.1;
 
-    // Shared
-    let highlight_mat = materials.add(ColorMaterial::from(COLOR_PANEL_HIGHLIGHT));
-
-    // Spawn grid panels (MMBN style)
-    for x in 0..GRID_WIDTH {
-        for y in 0..GRID_HEIGHT {
-            spawn_single_tile_panel(
-                commands,
-                materials,
-                x,
-                y,
-                panel_w,
-                panel_h,
-                inner_w,
-                inner_h,
-                &outer_frame_mesh,
-                &inner_frame_mesh,
-                &inner_panel_mesh,
-                &highlight_mesh,
-                &front_face_mesh,
-                &player_outer_mat,
-                &player_frame_mat,
-                &player_front_mat,
-                &enemy_outer_mat,
-                &enemy_frame_mat,
-                &enemy_front_mat,
-                &highlight_mat,
-            );
+            commands.spawn((
+                Sprite {
+                    image: tile_texture,
+                    custom_size: Some(layout.tile_size()),
+                    ..default()
+                },
+                Transform::from_xyz(sprite_pos.x, sprite_pos.y, z),
+                TilePanel { x, y },
+                TileHighlightState::new(is_player),
+                CleanupOnStateExit(GameState::Playing),
+            ));
         }
     }
-}
 
-/// Spawns a single tile panel with all its visual layers
-#[allow(clippy::too_many_arguments)]
-fn spawn_single_tile_panel(
-    commands: &mut Commands,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-    x: i32,
-    y: i32,
-    _panel_w: f32,
-    panel_h: f32,
-    _inner_w: f32,
-    inner_h: f32,
-    outer_frame_mesh: &Handle<Mesh>,
-    inner_frame_mesh: &Handle<Mesh>,
-    inner_panel_mesh: &Handle<Mesh>,
-    highlight_mesh: &Handle<Mesh>,
-    front_face_mesh: &Handle<Mesh>,
-    player_outer_mat: &Handle<ColorMaterial>,
-    player_frame_mat: &Handle<ColorMaterial>,
-    player_front_mat: &Handle<ColorMaterial>,
-    enemy_outer_mat: &Handle<ColorMaterial>,
-    enemy_frame_mat: &Handle<ColorMaterial>,
-    enemy_front_mat: &Handle<ColorMaterial>,
-    highlight_mat: &Handle<ColorMaterial>,
-) {
-    let is_player = x < PLAYER_AREA_WIDTH;
-
-    // Create unique material for inner panel (so it can be highlighted individually)
-    let inner_color = if is_player {
-        COLOR_PLAYER_PANEL_TOP
-    } else {
-        COLOR_ENEMY_PANEL_TOP
-    };
-    let unique_inner_mat = materials.add(ColorMaterial::from(inner_color));
-
-    let (outer_mat, frame_mat, front_mat) = if is_player {
-        (
-            player_outer_mat.clone(),
-            player_frame_mat.clone(),
-            player_front_mat.clone(),
-        )
-    } else {
-        (
-            enemy_outer_mat.clone(),
-            enemy_frame_mat.clone(),
-            enemy_front_mat.clone(),
-        )
-    };
-
-    let floor = tile_floor_world(x, y);
-    let world = tile_center_world(x, y);
-    let z_offset = -floor.y * DEPTH_Y_TO_Z;
-
-    // 1. Front face (3D depth effect) - positioned below the panel
-    commands.spawn((
-        Mesh2d(front_face_mesh.clone()),
-        MeshMaterial2d(front_mat),
-        Transform::from_xyz(
-            world.x,
-            world.y - panel_h / 2.0 - PANEL_DEPTH / 2.0,
-            Z_PANEL_SIDE + z_offset,
-        ),
-        CleanupOnStateExit(GameState::Playing),
-    ));
-
-    // 2. Outer frame background (darkest)
-    commands.spawn((
-        Mesh2d(outer_frame_mesh.clone()),
-        MeshMaterial2d(outer_mat),
-        Transform::from_xyz(world.x, world.y, Z_PANEL_TOP + z_offset),
-        CleanupOnStateExit(GameState::Playing),
-    ));
-
-    // 3. Inner frame border (medium tone - creates the grid lines)
-    commands.spawn((
-        Mesh2d(inner_frame_mesh.clone()),
-        MeshMaterial2d(frame_mat),
-        Transform::from_xyz(world.x, world.y, Z_PANEL_TOP + 0.1 + z_offset),
-        CleanupOnStateExit(GameState::Playing),
-    ));
-
-    // 4. Inner panel surface (brightest - the actual walkable area)
-    // Each tile gets its own unique material for individual highlighting
-    commands.spawn((
-        Mesh2d(inner_panel_mesh.clone()),
-        MeshMaterial2d(unique_inner_mat),
-        Transform::from_xyz(world.x, world.y, Z_PANEL_TOP + 0.2 + z_offset),
-        TilePanel { x, y },
-        CleanupOnStateExit(GameState::Playing),
-    ));
-
-    // 5. Highlight strip at top of inner panel
-    commands.spawn((
-        Mesh2d(highlight_mesh.clone()),
-        MeshMaterial2d(highlight_mat.clone()),
-        Transform::from_xyz(
-            world.x,
-            world.y + inner_h / 2.0 - 12.0,
-            Z_PANEL_TOP + 0.3 + z_offset,
-        ),
-        CleanupOnStateExit(GameState::Playing),
-    ));
+    // Insert tile assets as a resource for the highlight system
+    commands.insert_resource(tile_assets);
 }
 
 // ============================================================================
@@ -400,8 +277,10 @@ pub fn spawn_arena_visuals(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
+    asset_server: &Res<AssetServer>,
+    layout: &ArenaLayout,
 ) {
-    spawn_background(commands);
-    spawn_grid_lines(commands, meshes, materials);
-    spawn_tile_panels(commands, meshes, materials);
+    spawn_background(commands, layout);
+    spawn_grid_lines(commands, meshes, materials, layout);
+    spawn_tile_panels(commands, asset_server, layout);
 }

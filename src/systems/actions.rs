@@ -3,10 +3,10 @@ use bevy::prelude::*;
 use crate::components::{
     ActionSlot, ActionState, ActionType, BaseColor, Bullet, ChargedShot, Enemy, EnemyBullet,
     FlashTimer, GridPosition, Health, HealthText, Lifetime, Player, PlayerHealthText, Shield,
-    WideSwordSlash,
+    TargetsTiles, WideSwordSlash,
 };
 use crate::constants::*;
-use crate::systems::grid_utils::tile_floor_world;
+use crate::resources::ArenaLayout;
 
 /// Process action inputs (keys 1-3)
 /// NOTE: Weapon shooting (Space key) is handled by the weapon system
@@ -14,6 +14,7 @@ pub fn action_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     gamepads: Query<&Gamepad>,
     time: Res<Time>,
+    layout: Res<ArenaLayout>,
     mut player_query: Query<(Entity, &GridPosition, &mut Health), With<Player>>,
     mut action_query: Query<&mut ActionSlot>,
     mut hp_text_query: Query<&mut Text2d, With<PlayerHealthText>>,
@@ -56,6 +57,7 @@ pub fn action_input(
                             *player_pos,
                             &mut health,
                             &mut hp_text_query,
+                            &layout,
                         );
                     }
                 }
@@ -93,6 +95,7 @@ pub fn action_input(
                         *player_pos,
                         &mut health,
                         &mut hp_text_query,
+                        &layout,
                     );
                 }
             }
@@ -107,6 +110,7 @@ fn execute_action(
     player_pos: GridPosition,
     health: &mut Health,
     hp_text_query: &mut Query<&mut Text2d, With<PlayerHealthText>>,
+    layout: &ArenaLayout,
 ) {
     match action.action_type {
         ActionType::Heal => {
@@ -116,7 +120,7 @@ fn execute_action(
             activate_shield(commands, player_entity);
         }
         ActionType::WideSword => {
-            spawn_widesword_slash(commands, player_pos);
+            spawn_widesword_slash(commands, player_pos, layout);
         }
     }
     action.start_cooldown();
@@ -240,32 +244,44 @@ pub fn shield_blocks_damage(
     }
 }
 
-fn spawn_widesword_slash(commands: &mut Commands, player_pos: GridPosition) {
+fn spawn_widesword_slash(commands: &mut Commands, player_pos: GridPosition, layout: &ArenaLayout) {
     // WideSword hits the column in front of player (all 3 rows)
     let target_x = player_pos.x + 1;
 
+    // Target tiles for both hit detection and highlighting
+    let target_tiles: Vec<(i32, i32)> = (0..GRID_HEIGHT).map(|y| (target_x, y)).collect();
+
     // If target column is outside enemy area, still spawn visual but no hits
     let hit_tiles: Vec<(i32, i32)> = if (PLAYER_AREA_WIDTH..GRID_WIDTH).contains(&target_x) {
-        (0..GRID_HEIGHT).map(|y| (target_x, y)).collect()
+        target_tiles.clone()
     } else {
         vec![]
     };
 
     // Calculate world position for the slash visual (center of target column)
     let center_y = 1; // Middle row
-    let floor_pos = tile_floor_world(target_x, center_y);
+    let floor_pos = layout.tile_floor_world(target_x, center_y);
+
+    // Scale slash size with layout
+    let slash_width = 80.0 * layout.scale;
+    let slash_height = layout.step_y * 3.0 + 40.0 * layout.scale;
 
     commands.spawn((
         Sprite {
             color: COLOR_WIDESWORD_SLASH,
-            custom_size: Some(Vec2::new(80.0, TILE_STEP_Y * 3.0 + 40.0)), // Tall slash covering 3 rows
+            custom_size: Some(Vec2::new(slash_width, slash_height)),
             ..default()
         },
-        Transform::from_xyz(floor_pos.x, floor_pos.y + 20.0, Z_BULLET + 1.0),
+        Transform::from_xyz(
+            floor_pos.x,
+            floor_pos.y + 20.0 * layout.scale,
+            Z_BULLET + 1.0,
+        ),
         WideSwordSlash {
             damage: WIDESWORD_DAMAGE,
             hit_tiles,
         },
+        TargetsTiles::multiple(target_tiles), // Highlight all 3 target tiles
         Lifetime(Timer::from_seconds(
             WIDESWORD_SLASH_DURATION,
             TimerMode::Once,

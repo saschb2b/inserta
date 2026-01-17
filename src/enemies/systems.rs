@@ -10,7 +10,7 @@ use super::{
     EnemyMovement, EnemyStats, EnemyTraitContainer, MovementBehavior,
 };
 use crate::components::{
-    BaseColor, Bullet, EnemyBullet, GridPosition, Health, MoveTimer, RenderConfig,
+    BaseColor, Bullet, EnemyBullet, GridPosition, Health, MoveTimer, RenderConfig, TargetsTiles,
 };
 use crate::constants::*;
 
@@ -354,6 +354,7 @@ fn spawn_enemy_projectile(commands: &mut Commands, x: i32, y: i32, _speed: f32) 
         Bullet,
         EnemyBullet,
         MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
+        TargetsTiles::single(), // Highlight tile at projectile's position
     ));
 }
 

@@ -18,15 +18,37 @@ pub const GRID_WIDTH: i32 = 6;
 pub const GRID_HEIGHT: i32 = 3;
 pub const PLAYER_AREA_WIDTH: i32 = 3;
 
-// Panel geometry (flat top-down MMBN style)
-// Scaled up for 1280x800 - arena should be ~1000px wide, ~300px tall
-pub const TILE_W: f32 = 160.0;
-pub const TILE_H: f32 = 96.0;
-pub const TILE_STEP_X: f32 = 164.0;
-pub const TILE_STEP_Y: f32 = 100.0;
-pub const ROW_SKEW_X: f32 = 0.0; // No skew for MMBN flat style
+// ============================================================================
+// Tile Asset Configuration
+// ============================================================================
+// Tile sprites are located in assets/battle/arena/
+// Each tile has a "lip" (bottom border) that overlaps with the row below
 
-// Panel 3D depth effect
+/// Full tile sprite dimensions (from the PNG asset)
+pub const TILE_ASSET_WIDTH: f32 = 240.0;
+pub const TILE_ASSET_HEIGHT: f32 = 190.0;
+
+/// Height of the bottom "lip" that overlaps with the tile below
+/// Only visible on the bottom row; other rows render with this overlap
+pub const TILE_LIP_HEIGHT: f32 = 48.0;
+
+/// The visible tile height (excluding the lip for non-bottom rows)
+pub const TILE_VISIBLE_HEIGHT: f32 = TILE_ASSET_HEIGHT - TILE_LIP_HEIGHT;
+
+/// Step between tile centers in X direction (tiles rendered edge-to-edge)
+pub const TILE_STEP_X: f32 = TILE_ASSET_WIDTH;
+
+/// Step between tile centers in Y direction (with lip overlap)
+pub const TILE_STEP_Y: f32 = TILE_VISIBLE_HEIGHT;
+
+/// No horizontal skew for MMBN flat style
+pub const ROW_SKEW_X: f32 = 0.0;
+
+// Legacy constants for compatibility (will be phased out)
+pub const TILE_W: f32 = TILE_ASSET_WIDTH;
+pub const TILE_H: f32 = TILE_VISIBLE_HEIGHT;
+
+// Panel 3D depth effect (legacy, kept for reference)
 pub const PANEL_DEPTH: f32 = 16.0;
 
 // Sprite alignment
