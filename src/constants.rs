@@ -54,7 +54,7 @@ pub const PANEL_DEPTH: f32 = 16.0;
 // Sprite alignment
 // Anchor is relative to sprite center: -0.5 = bottom, 0 = center, 0.5 = top
 // The fighter sprite has some padding at the bottom, so we adjust slightly
-pub const FIGHTER_ANCHOR: Vec2 = Vec2::new(0.0, -0.25);
+pub const FIGHTER_ANCHOR: Vec2 = Vec2::new(0.0, -0.15);
 
 // Entity offsets (relative to tile floor point)
 // Negative Y moves the character down so feet align with panel bottom
