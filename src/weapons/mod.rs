@@ -605,7 +605,7 @@ pub fn projectile_hit_system(
     mut commands: Commands,
     projectile_query: Query<
         (Entity, &GridPosition, &Projectile),
-        (With<Bullet>, Without<EnemyBullet>),
+        (With<Bullet>, Without<EnemyBullet>, Without<ProjectileHit>),
     >,
     mut enemy_query: Query<(Entity, &GridPosition, &mut Health, &Children), With<Enemy>>,
     mut text_query: Query<&mut Text2d, With<HealthText>>,
