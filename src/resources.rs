@@ -214,16 +214,10 @@ impl CampaignProgress {
 }
 
 /// Currently selected battle to play
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Default)]
 pub struct SelectedBattle {
     pub arc: usize,
     pub battle: usize,
-}
-
-impl Default for SelectedBattle {
-    fn default() -> Self {
-        Self { arc: 0, battle: 0 }
-    }
 }
 
 /// Definition of a single battle encounter

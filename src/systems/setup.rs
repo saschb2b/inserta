@@ -236,8 +236,8 @@ fn spawn_enemy(
     // Create atlas layout from blueprint animation config
     let atlas_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
         UVec2::new(16, 16), // Frame size (TODO: make configurable in blueprint)
-        anims.idle_grid.0 as u32,
-        anims.idle_grid.1 as u32,
+        anims.idle_grid.0,
+        anims.idle_grid.1,
         None,
         None,
     ));
