@@ -11,6 +11,48 @@ This repo is a small Bevy (Rust) prototype for a Mega Man Battle Network–style
 2. **Verify Compilation**: IMMEDIATELY run `cargo check` to catch syntax errors or type mismatches.
 3. **Fix Errors**: If `cargo check` fails, fix the errors before proceeding.
 4. **Verify Behavior**: Run `cargo run` to ensure runtime behavior is correct.
+5. **Update LEARNINGS.md**: Record any noteworthy discoveries (see below).
+
+## Maintaining LEARNINGS.md
+**ALWAYS update `LEARNINGS.md` when something noteworthy happens.** This is a
+first-class artifact that captures reusable knowledge for future development.
+
+### When to add entries
+- **Decisions**: When choosing an approach over alternatives (add to Decisions)
+- **APIs/Types**: When introducing or changing a public API/type (add to Interfaces)
+- **Bugs/Edge cases**: When encountering a bug or edge case (add to Gotchas)
+- **Patterns**: When establishing a repeatable solution (add to Patterns)
+- **Scripts/Config**: When adding tooling or commands (add to Tooling)
+- **Test strategies**: When establishing test heuristics (add to Metrics and tests)
+
+### Entry format
+- Use stable IDs: `DEC-001`, `PAT-002`, `GCH-003`, etc.
+- One-sentence summary first, then details.
+- Include file paths or commit refs for traceability.
+- Never delete entries; mark as `Status: Superseded by DEC-00X` if outdated.
+
+### Example entry
+```markdown
+### DEC-005: Use X instead of Y
+Status: accepted
+
+Summary: One sentence explaining the decision.
+
+Context:
+- Why this decision was needed.
+
+Decision:
+- What was chosen.
+
+Alternatives:
+- What else was considered.
+
+Consequences:
+- Impact of this decision.
+
+Refs:
+- src/path/to/file.rs
+```
 
 ## Project structure
 - `src/main.rs`: App wiring (plugins + system scheduling)
