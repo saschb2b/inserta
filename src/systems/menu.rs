@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{
-    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyId, FighterConfig, GameState,
-};
+use crate::components::{CleanupOnStateExit, GameState};
 
 /// Marker for the main menu container
 #[derive(Component)]
@@ -15,8 +13,8 @@ pub struct MenuButtonAction(pub MenuAction);
 /// Available menu actions
 #[derive(Clone, Debug, Copy)]
 pub enum MenuAction {
-    StartTestBattle,
-    // Future: StartCampaign, Options, Quit, etc.
+    Shop,
+    Campaign,
 }
 
 /// Setup the main menu using Bevy UI
@@ -59,7 +57,32 @@ pub fn setup_menu(mut commands: Commands) {
                 },
             ));
 
-            // Start Button
+            // Campaign Button
+            parent
+                .spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(300.0),
+                        height: Val::Px(65.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        border: UiRect::all(Val::Px(2.0)),
+                        margin: UiRect::bottom(Val::Px(20.0)),
+                        ..default()
+                    },
+                    BorderColor::all(Color::WHITE),
+                    BackgroundColor(Color::srgb(0.3, 0.5, 0.8)),
+                    MenuButtonAction(MenuAction::Campaign),
+                ))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Text::new("Campaign"),
+                        TextFont::from_font_size(30.0),
+                        TextColor(Color::WHITE),
+                    ));
+                });
+
+            // Shop Button
             parent
                 .spawn((
                     Button,
@@ -72,12 +95,12 @@ pub fn setup_menu(mut commands: Commands) {
                         ..default()
                     },
                     BorderColor::all(Color::WHITE),
-                    BackgroundColor(Color::srgb(0.3, 0.5, 0.8)),
-                    MenuButtonAction(MenuAction::StartTestBattle),
+                    BackgroundColor(Color::srgb(0.5, 0.4, 0.7)),
+                    MenuButtonAction(MenuAction::Shop),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Text::new("Start Test Battle"),
+                        Text::new("Shop"),
                         TextFont::from_font_size(30.0),
                         TextColor(Color::WHITE),
                     ));
@@ -98,7 +121,6 @@ pub fn setup_menu(mut commands: Commands) {
 
 /// Handle menu selection/confirmation via Interaction (Mouse/Touch/Gamepad Navigation)
 pub fn handle_menu_selection(
-    mut commands: Commands,
     interaction_query: Query<
         (&Interaction, &MenuButtonAction),
         (Changed<Interaction>, With<Button>),
@@ -108,23 +130,11 @@ pub fn handle_menu_selection(
     for (interaction, action) in &interaction_query {
         if *interaction == Interaction::Pressed {
             match action.0 {
-                MenuAction::StartTestBattle => {
-                    // Insert the test battle configuration
-                    let config = ArenaConfig {
-                        fighter: FighterConfig {
-                            start_x: 1,
-                            start_y: 1,
-                            max_hp: 100,
-                            actions: vec![
-                                ActionType::Heal,
-                                ActionType::Shield,
-                                ActionType::WideSword,
-                            ],
-                        },
-                        enemies: vec![EnemyConfig::new(EnemyId::Slime, 4, 1).with_hp(100)],
-                    };
-                    commands.insert_resource(config);
-                    next_state.set(GameState::Playing);
+                MenuAction::Campaign => {
+                    next_state.set(GameState::Campaign);
+                }
+                MenuAction::Shop => {
+                    next_state.set(GameState::Shop);
                 }
             }
         }

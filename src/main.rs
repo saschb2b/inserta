@@ -17,7 +17,9 @@ mod weapons;
 use components::{GameState, InputCooldown};
 use constants::MOVE_COOLDOWN;
 use enemies::EnemyPlugin;
-use resources::{GameProgress, PlayerCurrency, PlayerUpgrades, WaveState};
+use resources::{
+    CampaignProgress, GameProgress, PlayerCurrency, PlayerUpgrades, SelectedBattle, WaveState,
+};
 use systems::{
     action_ui::update_action_bar_ui,
     actions::{
@@ -25,6 +27,7 @@ use systems::{
         shield_blocks_damage, update_shield, widesword_hit_enemy,
     },
     animation::{animate_player, animate_slime},
+    campaign::{cleanup_campaign, setup_campaign, update_campaign},
     combat::{
         bullet_hit_enemy, bullet_movement, check_victory_condition, enemy_bullet_hit_player,
         enemy_bullet_movement, entity_flash, muzzle_lifetime, projectile_animation_system,
@@ -37,8 +40,8 @@ use systems::{
     menu::{cleanup_menu, handle_menu_selection, setup_menu, update_menu_visuals},
     player::move_player,
     setup::{
-        cleanup_arena, cleanup_menu_entities, cleanup_splash_entities, setup_action_bar,
-        setup_arena, setup_global, spawn_player_actions,
+        cleanup_arena, cleanup_campaign_entities, cleanup_menu_entities, cleanup_splash_entities,
+        setup_action_bar, setup_arena, setup_global, spawn_player_actions,
     },
     splash::{animate_splash, cleanup_splash, setup_splash, update_splash},
 };
@@ -68,6 +71,8 @@ fn main() {
         .init_resource::<PlayerUpgrades>()
         .init_resource::<WaveState>()
         .init_resource::<GrowthTreeState>()
+        .init_resource::<CampaignProgress>()
+        .init_resource::<SelectedBattle>()
         // Weapon system plugin
         .add_plugins(WeaponPlugin)
         // Enemy behavior system plugin
@@ -101,6 +106,18 @@ fn main() {
         .add_systems(
             OnExit(GameState::MainMenu),
             (cleanup_menu, cleanup_menu_entities),
+        )
+        // ====================================================================
+        // Campaign
+        // ====================================================================
+        .add_systems(OnEnter(GameState::Campaign), setup_campaign)
+        .add_systems(
+            Update,
+            update_campaign.run_if(in_state(GameState::Campaign)),
+        )
+        .add_systems(
+            OnExit(GameState::Campaign),
+            (cleanup_campaign, cleanup_campaign_entities),
         )
         // ====================================================================
         // Shop / Growth Tree

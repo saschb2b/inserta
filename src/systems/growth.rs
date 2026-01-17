@@ -1,11 +1,8 @@
 use bevy::prelude::*;
-use rand::Rng;
 use std::collections::HashSet;
 
-use crate::components::{
-    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyId, FighterConfig, GameState,
-};
-use crate::resources::{GameProgress, PlayerCurrency, PlayerUpgrades};
+use crate::components::{CleanupOnStateExit, GameState};
+use crate::resources::{PlayerCurrency, PlayerUpgrades};
 use crate::systems::shop::{ShopAction, ShopButtonAction}; // Import from shop for reuse
 
 // ============================================================================
@@ -298,7 +295,7 @@ pub fn setup_growth_tree(
                         TextColor(Color::srgb(1.0, 0.9, 0.2)),
                     ));
 
-                    // Start Battle Button
+                    // Back to Menu Button
                     panel
                         .spawn((
                             Button,
@@ -312,12 +309,12 @@ pub fn setup_growth_tree(
                                 ..default()
                             },
                             BorderColor::all(Color::WHITE),
-                            BackgroundColor(Color::srgb(0.9, 0.5, 0.5)),
-                            ShopButtonAction(ShopAction::NextBattle),
+                            BackgroundColor(Color::srgb(0.5, 0.5, 0.7)),
+                            ShopButtonAction(ShopAction::BackToMenu),
                         ))
                         .with_children(|btn| {
                             btn.spawn((
-                                Text::new("INITIATE BATTLE"),
+                                Text::new("BACK TO MENU"),
                                 TextFont::from_font_size(24.0),
                                 TextColor(Color::WHITE),
                             ));
@@ -325,7 +322,7 @@ pub fn setup_growth_tree(
 
                     // Controller Hints
                     panel.spawn((
-                        Text::new("[D-Pad] Navigate  [A] Unlock  [Start] Battle"),
+                        Text::new("[D-Pad] Navigate  [A] Unlock  [Esc] Back"),
                         TextFont::from_font_size(16.0),
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
                         Node {
@@ -338,7 +335,6 @@ pub fn setup_growth_tree(
 }
 
 pub fn update_growth_tree(
-    mut commands: Commands,
     mut node_query: Query<
         (
             &Interaction,
@@ -384,22 +380,20 @@ pub fn update_growth_tree(
     mut upgrades: ResMut<PlayerUpgrades>,
     mut tree_state: ResMut<GrowthTreeState>,
     mut next_state: ResMut<NextState<GameState>>,
-    progress: Res<GameProgress>,
 ) {
-    // 1. Handle Next Battle Button
+    // 1. Handle Back to Menu Button
     // check for single_mut safely
     if let Some((interaction, mut bg, mut border)) = battle_btn_query.iter_mut().next() {
         match interaction {
             Interaction::Pressed => {
-                start_battle(&mut commands, &progress);
-                next_state.set(GameState::Playing);
+                next_state.set(GameState::MainMenu);
             }
             Interaction::Hovered => {
-                bg.0 = Color::srgb(1.0, 0.6, 0.6);
+                bg.0 = Color::srgb(0.6, 0.6, 0.8);
                 *border = BorderColor::all(Color::WHITE);
             }
             Interaction::None => {
-                bg.0 = Color::srgb(0.9, 0.5, 0.5);
+                bg.0 = Color::srgb(0.5, 0.5, 0.7);
                 *border = BorderColor::all(Color::NONE);
             }
         }
@@ -477,46 +471,4 @@ pub fn cleanup_growth(mut commands: Commands, query: Query<Entity, With<GrowthMe
     for entity in &query {
         commands.entity(entity).despawn();
     }
-}
-
-fn start_battle(commands: &mut Commands, progress: &GameProgress) {
-    // Scale enemy HP based on level
-    let base_hp = 100;
-    let hp_per_level = 50;
-    let enemy_hp = base_hp + (progress.current_level as i32 * hp_per_level);
-
-    // Determine number of enemies (1 to 3 based on level)
-    let enemy_count = (1 + (progress.current_level / 3)).min(3);
-
-    let mut enemies = Vec::new();
-    let mut rng = rand::rng();
-
-    // Possible rows: 0, 1, 2
-    let mut available_rows = vec![0, 1, 2];
-
-    for _ in 0..enemy_count {
-        if available_rows.is_empty() {
-            break;
-        }
-
-        // Pick a random row to avoid overlap
-        let index = rng.random_range(0..available_rows.len());
-        let row = available_rows.remove(index);
-
-        // Vary column slightly (4 or 5)
-        let col = rng.random_range(4..=5);
-
-        enemies.push(EnemyConfig::new(EnemyId::Slime, col, row).with_hp(enemy_hp));
-    }
-
-    let config = ArenaConfig {
-        fighter: FighterConfig {
-            start_x: 1,
-            start_y: 1,
-            max_hp: 100, // This is overridden by PlayerUpgrades in setup_arena
-            actions: vec![ActionType::Heal, ActionType::Shield, ActionType::WideSword],
-        },
-        enemies,
-    };
-    commands.insert_resource(config);
 }

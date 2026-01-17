@@ -10,6 +10,7 @@ pub enum GameState {
     Splash,
     MainMenu,
     Shop,
+    Campaign,
     Playing,
 }
 

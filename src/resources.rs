@@ -154,6 +154,210 @@ pub enum WaveState {
     Cleared,
 }
 
+// ============================================================================
+// Campaign Resources
+// ============================================================================
+
+use crate::components::EnemyConfig;
+use crate::enemies::EnemyId;
+
+/// Tracks campaign progress (unlocked arcs, completed battles)
+#[derive(Resource, Debug, Clone)]
+pub struct CampaignProgress {
+    /// Highest unlocked arc index (0-based)
+    pub unlocked_arc: usize,
+    /// For each arc, which battles have been completed (true = won)
+    pub completed_battles: Vec<Vec<bool>>,
+}
+
+impl Default for CampaignProgress {
+    fn default() -> Self {
+        Self {
+            unlocked_arc: 0,
+            completed_battles: vec![vec![false; 10]], // Arc 1 has 10 battles
+        }
+    }
+}
+
+impl CampaignProgress {
+    /// Check if a specific battle in an arc has been won
+    pub fn is_battle_won(&self, arc: usize, battle: usize) -> bool {
+        self.completed_battles
+            .get(arc)
+            .and_then(|battles| battles.get(battle))
+            .copied()
+            .unwrap_or(false)
+    }
+
+    /// Mark a battle as completed
+    pub fn complete_battle(&mut self, arc: usize, battle: usize) {
+        // Ensure we have enough arcs
+        while self.completed_battles.len() <= arc {
+            self.completed_battles.push(vec![false; 10]);
+        }
+        // Ensure we have enough battles
+        while self.completed_battles[arc].len() <= battle {
+            self.completed_battles[arc].push(false);
+        }
+        self.completed_battles[arc][battle] = true;
+
+        // Check if boss battle (index 9) was completed to unlock next arc
+        if battle == 9 && arc == self.unlocked_arc {
+            self.unlocked_arc += 1;
+        }
+    }
+
+    /// Check if an arc is unlocked
+    pub fn is_arc_unlocked(&self, arc: usize) -> bool {
+        arc <= self.unlocked_arc
+    }
+}
+
+/// Currently selected battle to play
+#[derive(Resource, Debug, Clone)]
+pub struct SelectedBattle {
+    pub arc: usize,
+    pub battle: usize,
+}
+
+impl Default for SelectedBattle {
+    fn default() -> Self {
+        Self { arc: 0, battle: 0 }
+    }
+}
+
+/// Definition of a single battle encounter
+#[derive(Debug, Clone)]
+pub struct BattleDef {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub enemies: Vec<EnemyConfig>,
+    pub is_boss: bool,
+}
+
+/// Definition of a campaign arc (10 battles)
+#[derive(Debug, Clone)]
+pub struct ArcDef {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub battles: Vec<BattleDef>,
+}
+
+/// Get all arc definitions
+pub fn get_all_arcs() -> Vec<ArcDef> {
+    vec![arc_1_slime_invasion()]
+}
+
+/// Arc 1: Slime Invasion
+fn arc_1_slime_invasion() -> ArcDef {
+    ArcDef {
+        name: "Slime Invasion",
+        description: "The slimes are attacking! Defeat them all.",
+        battles: vec![
+            // Battle 1: 1x Slime
+            BattleDef {
+                name: "First Contact",
+                description: "1x Slime",
+                enemies: vec![EnemyConfig::new(EnemyId::Slime, 4, 1)],
+                is_boss: false,
+            },
+            // Battle 2: 2x Slime
+            BattleDef {
+                name: "Double Trouble",
+                description: "2x Slime",
+                enemies: vec![
+                    EnemyConfig::new(EnemyId::Slime, 4, 0),
+                    EnemyConfig::new(EnemyId::Slime, 4, 2),
+                ],
+                is_boss: false,
+            },
+            // Battle 3: 3x Slime
+            BattleDef {
+                name: "Slime Trio",
+                description: "3x Slime",
+                enemies: vec![
+                    EnemyConfig::new(EnemyId::Slime, 4, 0),
+                    EnemyConfig::new(EnemyId::Slime, 4, 1),
+                    EnemyConfig::new(EnemyId::Slime, 4, 2),
+                ],
+                is_boss: false,
+            },
+            // Battle 4: 1x Slime2
+            BattleDef {
+                name: "Slime II Appears",
+                description: "1x Slime II",
+                enemies: vec![EnemyConfig::new(EnemyId::Slime2, 4, 1)],
+                is_boss: false,
+            },
+            // Battle 5: 1x Slime2, 1x Slime
+            BattleDef {
+                name: "Mixed Company",
+                description: "1x Slime II, 1x Slime",
+                enemies: vec![
+                    EnemyConfig::new(EnemyId::Slime2, 5, 1),
+                    EnemyConfig::new(EnemyId::Slime, 4, 0),
+                ],
+                is_boss: false,
+            },
+            // Battle 6: 1x Slime2, 2x Slime
+            BattleDef {
+                name: "Slime Squad",
+                description: "1x Slime II, 2x Slime",
+                enemies: vec![
+                    EnemyConfig::new(EnemyId::Slime2, 5, 1),
+                    EnemyConfig::new(EnemyId::Slime, 4, 0),
+                    EnemyConfig::new(EnemyId::Slime, 4, 2),
+                ],
+                is_boss: false,
+            },
+            // Battle 7: 1x Slime2, 3x Slime
+            BattleDef {
+                name: "Slime Swarm",
+                description: "1x Slime II, 3x Slime",
+                enemies: vec![
+                    EnemyConfig::new(EnemyId::Slime2, 5, 1),
+                    EnemyConfig::new(EnemyId::Slime, 4, 0),
+                    EnemyConfig::new(EnemyId::Slime, 4, 2),
+                    EnemyConfig::new(EnemyId::Slime, 3, 1),
+                ],
+                is_boss: false,
+            },
+            // Battle 8: 2x Slime2
+            BattleDef {
+                name: "Slime II Duo",
+                description: "2x Slime II",
+                enemies: vec![
+                    EnemyConfig::new(EnemyId::Slime2, 4, 0),
+                    EnemyConfig::new(EnemyId::Slime2, 4, 2),
+                ],
+                is_boss: false,
+            },
+            // Battle 9: 2x Slime2, 1x Slime
+            BattleDef {
+                name: "Elite Guard",
+                description: "2x Slime II, 1x Slime",
+                enemies: vec![
+                    EnemyConfig::new(EnemyId::Slime2, 5, 0),
+                    EnemyConfig::new(EnemyId::Slime2, 5, 2),
+                    EnemyConfig::new(EnemyId::Slime, 4, 1),
+                ],
+                is_boss: false,
+            },
+            // Battle 10: BOSS - 1x Slime3, 2x Slime2
+            BattleDef {
+                name: "King Slime",
+                description: "BOSS: King Slime + 2x Slime II",
+                enemies: vec![
+                    EnemyConfig::new(EnemyId::Slime3, 5, 1),
+                    EnemyConfig::new(EnemyId::Slime2, 4, 0),
+                    EnemyConfig::new(EnemyId::Slime2, 4, 2),
+                ],
+                is_boss: true,
+            },
+        ],
+    }
+}
+
 impl PlayerUpgrades {
     // Calculation helpers for actual values
 

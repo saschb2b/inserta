@@ -10,6 +10,8 @@ use bevy::prelude::*;
 pub enum EnemyId {
     #[default]
     Slime,
+    Slime2,
+    Slime3,
     // Future enemies:
     // Mettaur,
     // Canodumb,

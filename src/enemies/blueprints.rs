@@ -35,6 +35,8 @@ impl EnemyBlueprint {
     pub fn get(id: EnemyId) -> Self {
         match id {
             EnemyId::Slime => slime_blueprint(),
+            EnemyId::Slime2 => slime2_blueprint(),
+            EnemyId::Slime3 => slime3_blueprint(),
         }
     }
 
@@ -90,7 +92,107 @@ fn slime_blueprint() -> EnemyBlueprint {
                 hurt_fps: 10.0,
                 dead_fps: 10.0,
 
-                idle_file: "IDLE - WALK.png".into(),
+                idle_file: "IDLE.png".into(),
+                attack_file: Some("SHOOTING.png".into()),
+                hurt_file: None,
+                dead_file: Some("DEAD.png".into()),
+            },
+        },
+    }
+}
+
+/// Slime but stronger - Basic enemy with random movement and projectile attack
+fn slime2_blueprint() -> EnemyBlueprint {
+    EnemyBlueprint {
+        id: EnemyId::Slime2,
+        name: "Slime II",
+        stats: EnemyStats {
+            base_hp: 60,
+            contact_damage: 10,
+            move_speed: 1.0,
+            attack_speed: 0.5,
+        },
+        movement: MovementBehavior::Random { idle_chance: 0.33 },
+        attack: AttackBehavior::Projectile {
+            damage: 40,
+            speed: 4.0, // tiles per second
+            charge_time: 0.5,
+            projectile_asset: "projectile/blaster".to_string(),
+        },
+        traits: EnemyTraits::default(),
+        visuals: EnemyVisuals {
+            sprite_path: "enemies/slime2".into(),
+            draw_size: Vec2::new(128.0, 128.0),
+            anchor: Vec2::new(0.0, -0.40),
+            offset: Vec2::new(0.0, -8.0),
+            flip_x: true,
+            animations: EnemyAnimations {
+                idle_grid: (3, 3),
+                attack_grid: Some((3, 4)),
+                hurt_grid: None,
+                dead_grid: Some((3, 3)),
+
+                idle_frames: 7,
+                attack_frames: 10,
+                hurt_frames: 0,
+                dead_frames: 7,
+
+                idle_fps: 8.0,
+                attack_fps: 12.0,
+                hurt_fps: 10.0,
+                dead_fps: 10.0,
+
+                idle_file: "IDLE.png".into(),
+                attack_file: Some("SHOOTING.png".into()),
+                hurt_file: None,
+                dead_file: Some("DEAD.png".into()),
+            },
+        },
+    }
+}
+
+/// Slime but even stronger - Boss slime with random movement and projectile attack
+fn slime3_blueprint() -> EnemyBlueprint {
+    EnemyBlueprint {
+        id: EnemyId::Slime3,
+        name: "King Slime",
+        stats: EnemyStats {
+            base_hp: 100,
+            contact_damage: 10,
+            move_speed: 1.0,
+            attack_speed: 0.5,
+        },
+        movement: MovementBehavior::Random { idle_chance: 0.33 },
+        attack: AttackBehavior::Projectile {
+            damage: 100,
+            speed: 4.0, // tiles per second
+            charge_time: 0.5,
+            projectile_asset: "projectile/blaster".to_string(),
+        },
+        traits: EnemyTraits::default(),
+        visuals: EnemyVisuals {
+            sprite_path: "enemies/slime3".into(),
+            draw_size: Vec2::new(128.0, 128.0),
+            anchor: Vec2::new(0.0, -0.40),
+            offset: Vec2::new(0.0, -8.0),
+            flip_x: true,
+            animations: EnemyAnimations {
+                idle_grid: (3, 3),
+                attack_grid: Some((3, 4)),
+                hurt_grid: None,
+                dead_grid: Some((3, 3)),
+
+                idle_frames: 7,
+                attack_frames: 10,
+                hurt_frames: 0,
+                dead_frames: 7,
+
+                idle_fps: 8.0,
+                attack_fps: 12.0,
+                hurt_fps: 10.0,
+                dead_fps: 10.0,
+
+                idle_file: "IDLE.png".into(),
                 attack_file: Some("SHOOTING.png".into()),
                 hurt_file: None,
                 dead_file: Some("DEAD.png".into()),

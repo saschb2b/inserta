@@ -692,6 +692,89 @@ Refs:
 
 ---
 
+### DEC-010: Campaign system with arc-based battle progression
+Status: accepted
+
+Summary: Implement campaign mode with 10-battle arcs, player-controlled battle selection,
+and persistent progress tracking.
+
+Context:
+- Original game loop went directly from menu to battle to shop in a forced cycle.
+- Wanted player agency: choose which battle to play, grind completed battles.
+- MMBN games have arc-based progression with unlockable content.
+
+Decision:
+- Add `GameState::Campaign` between MainMenu and Playing.
+- Create `CampaignProgress` resource tracking unlocked arcs and completed battles.
+- Create `SelectedBattle` resource to remember which battle player chose.
+- Define arcs via `ArcDef` and battles via `BattleDef` in resources.rs.
+- Arc 1 "Slime Invasion" has 10 battles with escalating difficulty.
+- Battle 10 is always a boss battle; completing it unlocks next arc.
+- Victory returns to Campaign screen (not Shop) and marks battle complete.
+
+Alternatives:
+- Linear progression: Less player agency, can't grind.
+- Random battles: No sense of progression.
+- World map: More complex UI, overkill for current scope.
+
+Consequences:
+- Player controls pace of progression.
+- Can replay any completed battle for currency grinding.
+- Boss battles gate arc progression.
+- Easy to add new arcs (just add to get_all_arcs()).
+- Menu now has Campaign and Shop buttons.
+
+Refs:
+- src/resources.rs:CampaignProgress, SelectedBattle, BattleDef, ArcDef
+- src/systems/campaign.rs
+- src/systems/menu.rs:MenuAction::Campaign, MenuAction::Shop
+- src/systems/combat.rs:check_victory_condition() updates
+
+---
+
+### INT-006: Campaign Battle Selection
+Summary: Resources and structs for campaign progression.
+
+```rust
+// Tracks what player has unlocked/completed
+pub struct CampaignProgress {
+    pub unlocked_arc: usize,           // Highest unlocked arc (0-based)
+    pub completed_battles: Vec<Vec<bool>>,  // [arc][battle] = won?
+}
+
+// Currently selected battle to play
+pub struct SelectedBattle {
+    pub arc: usize,
+    pub battle: usize,
+}
+
+// Definition of a single battle
+pub struct BattleDef {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub enemies: Vec<EnemyConfig>,
+    pub is_boss: bool,
+}
+
+// Definition of an arc (10 battles)
+pub struct ArcDef {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub battles: Vec<BattleDef>,
+}
+```
+
+Invariants:
+- Each arc should have exactly 10 battles.
+- Battle index 9 (10th battle) should have is_boss: true.
+- Completing boss unlocks next arc automatically.
+- Battle N is available if N==0 or battle N-1 is completed.
+
+Refs:
+- src/resources.rs:157-359
+
+---
+
 ## References
 
 - [Bevy ECS Book](https://bevy.org/learn/book/ecs/) - Core ECS concepts

@@ -1,10 +1,8 @@
 use bevy::prelude::*;
 use bevy::ui::RepeatedGridTrack;
 
-use crate::components::{
-    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyId, FighterConfig, GameState,
-};
-use crate::resources::{GameProgress, PlayerCurrency, PlayerUpgrades};
+use crate::components::{CleanupOnStateExit, GameState};
+use crate::resources::{PlayerCurrency, PlayerUpgrades};
 
 // ============================================================================
 // Shop State
@@ -19,7 +17,7 @@ pub enum ShopAction {
     UpgradeHealth,
     UpgradeFireRate,
     UpgradeCritChance,
-    NextBattle,
+    BackToMenu,
 }
 
 #[derive(Component)]
@@ -32,11 +30,7 @@ pub struct ShopButtonText(pub ShopAction);
 // Setup
 // ============================================================================
 
-pub fn setup_shop(
-    mut commands: Commands,
-    currency: Res<PlayerCurrency>,
-    progress: Res<GameProgress>,
-) {
+pub fn setup_shop(mut commands: Commands, currency: Res<PlayerCurrency>) {
     // Root Node
     commands
         .spawn((
@@ -75,16 +69,11 @@ pub fn setup_shop(
                 },
             ));
 
-            // Wave Info
-            parent.spawn((
-                Text::new(format!("Next Wave: {}", progress.current_level + 1)),
-                TextFont::from_font_size(24.0),
-                TextColor(Color::srgb(0.7, 0.7, 0.7)),
-                Node {
-                    margin: UiRect::bottom(Val::Px(40.0)),
-                    ..default()
-                },
-            ));
+            // Spacer (removed wave info since we use campaign now)
+            parent.spawn(Node {
+                height: Val::Px(40.0),
+                ..default()
+            });
 
             // Shop Items Container (Grid-like)
             parent
@@ -134,7 +123,7 @@ pub fn setup_shop(
                     }
                 });
 
-            // Next Battle Button (Separate)
+            // Back to Menu Button (Separate)
             parent
                 .spawn((
                     Button,
@@ -148,15 +137,15 @@ pub fn setup_shop(
                         ..default()
                     },
                     BorderColor::all(Color::WHITE),
-                    BackgroundColor(Color::srgb(0.9, 0.5, 0.5)),
-                    ShopButtonAction(ShopAction::NextBattle),
+                    BackgroundColor(Color::srgb(0.5, 0.5, 0.7)),
+                    ShopButtonAction(ShopAction::BackToMenu),
                 ))
                 .with_children(|btn| {
                     btn.spawn((
-                        Text::new("INITIATE BATTLE"),
+                        Text::new("BACK TO MENU"),
                         TextFont::from_font_size(32.0),
                         TextColor(Color::WHITE),
-                        ShopButtonText(ShopAction::NextBattle),
+                        ShopButtonText(ShopAction::BackToMenu),
                     ));
                 });
         });
@@ -167,7 +156,6 @@ pub fn setup_shop(
 // ============================================================================
 
 pub fn handle_shop_interaction(
-    mut commands: Commands,
     interaction_query: Query<
         (&Interaction, &ShopButtonAction),
         (Changed<Interaction>, With<Button>),
@@ -175,7 +163,6 @@ pub fn handle_shop_interaction(
     mut currency: ResMut<PlayerCurrency>,
     mut upgrades: ResMut<PlayerUpgrades>,
     mut next_state: ResMut<NextState<GameState>>,
-    progress: Res<GameProgress>,
 ) {
     for (interaction, shop_action) in &interaction_query {
         if *interaction == Interaction::Pressed {
@@ -208,9 +195,8 @@ pub fn handle_shop_interaction(
                         upgrades.crit_chance_level += 1;
                     }
                 }
-                ShopAction::NextBattle => {
-                    start_battle(&mut commands, &progress);
-                    next_state.set(GameState::Playing);
+                ShopAction::BackToMenu => {
+                    next_state.set(GameState::MainMenu);
                 }
             }
         }
@@ -240,7 +226,7 @@ pub fn update_shop_visuals(
             ShopAction::UpgradeHealth => currency.zenny >= upgrades.cost_health(),
             ShopAction::UpgradeFireRate => currency.zenny >= upgrades.cost_fire_rate(),
             ShopAction::UpgradeCritChance => currency.zenny >= upgrades.cost_crit_chance(),
-            ShopAction::NextBattle => true,
+            ShopAction::BackToMenu => true,
         }
     };
 
@@ -265,8 +251,8 @@ pub fn update_shop_visuals(
             }
             Interaction::None => {
                 if affordable {
-                    if action.0 == ShopAction::NextBattle {
-                        bg.0 = Color::srgb(0.9, 0.5, 0.5);
+                    if action.0 == ShopAction::BackToMenu {
+                        bg.0 = Color::srgb(0.5, 0.5, 0.7);
                     } else {
                         bg.0 = Color::srgb(0.3, 0.5, 0.8);
                     }
@@ -298,10 +284,10 @@ pub fn update_shop_visuals(
                 format!("Crit Chance Lv.{}", upgrades.crit_chance_level),
                 upgrades.cost_crit_chance(),
             ),
-            ShopAction::NextBattle => ("INITIATE BATTLE".to_string(), 0),
+            ShopAction::BackToMenu => ("BACK TO MENU".to_string(), 0),
         };
 
-        if text_action.0 == ShopAction::NextBattle {
+        if text_action.0 == ShopAction::BackToMenu {
             text.0 = label;
             color.0 = Color::WHITE;
         } else {
@@ -319,22 +305,4 @@ pub fn cleanup_shop(mut commands: Commands, query: Query<Entity, With<ShopMenu>>
     for entity in &query {
         commands.entity(entity).despawn();
     }
-}
-
-fn start_battle(commands: &mut Commands, progress: &GameProgress) {
-    // Scale enemy HP based on level
-    let base_hp = 100;
-    let hp_per_level = 50;
-    let enemy_hp = base_hp + (progress.current_level as i32 * hp_per_level);
-
-    let config = ArenaConfig {
-        fighter: FighterConfig {
-            start_x: 1,
-            start_y: 1,
-            max_hp: 100, // This is overridden by PlayerUpgrades in setup_arena
-            actions: vec![ActionType::Heal, ActionType::Shield, ActionType::WideSword],
-        },
-        enemies: vec![EnemyConfig::new(EnemyId::Slime, 4, 1).with_hp(enemy_hp)],
-    };
-    commands.insert_resource(config);
 }

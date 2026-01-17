@@ -2,6 +2,7 @@ pub mod action_ui;
 pub mod actions;
 pub mod animation;
 pub mod arena;
+pub mod campaign;
 pub mod combat;
 pub mod common;
 pub mod enemy_ai;

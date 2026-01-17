@@ -4,7 +4,7 @@ use crate::components::{
     TileAssets, TileHighlightState, TilePanel,
 };
 use crate::constants::*;
-use crate::resources::{GameProgress, PlayerCurrency, WaveState};
+use crate::resources::{CampaignProgress, GameProgress, PlayerCurrency, SelectedBattle, WaveState};
 
 /// Speed of highlight fade in/out (intensity units per second)
 const HIGHLIGHT_FADE_SPEED: f32 = 8.0;
@@ -287,6 +287,8 @@ pub fn check_victory_condition(
     mut next_state: ResMut<NextState<GameState>>,
     mut currency: ResMut<PlayerCurrency>,
     mut progress: ResMut<GameProgress>,
+    mut campaign_progress: ResMut<CampaignProgress>,
+    selected_battle: Option<Res<SelectedBattle>>,
 ) {
     if *wave_state == WaveState::Active && enemy_query.is_empty() {
         // Victory!
@@ -300,8 +302,19 @@ pub fn check_victory_condition(
         // Advance level
         progress.next_level();
 
-        // Go to shop
-        next_state.set(GameState::Shop);
+        // If we came from a campaign battle, mark it complete and go back to campaign
+        if let Some(selected) = selected_battle {
+            campaign_progress.complete_battle(selected.arc, selected.battle);
+            info!(
+                "Battle {} of Arc {} completed!",
+                selected.battle + 1,
+                selected.arc + 1
+            );
+            next_state.set(GameState::Campaign);
+        } else {
+            // Fallback: Go to shop (for test battles or other modes)
+            next_state.set(GameState::Shop);
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 use bevy::image::TextureAtlas;
 use bevy::prelude::*;
 
-use crate::assets::{FighterSprites, SlimeSprites};
+use crate::assets::FighterSprites;
 use crate::components::{
     Enemy, FighterAnim, FighterAnimState, FlashTimer, Player, SlimeAnim, SlimeAnimState,
 };
@@ -87,78 +87,35 @@ pub fn animate_player(
 }
 
 // ============================================================================
-// Slime Animation
+// Slime Animation (uses SlimeAnim component which stores frame count from blueprint)
 // ============================================================================
 
-fn slime_animation_for_state(sprites: &SlimeSprites, state: SlimeAnimState) -> Handle<Image> {
+/// Get frame count for slime animation state
+/// TODO: This should come from the blueprint/component, hardcoded for now
+fn slime_frames_for_state(state: SlimeAnimState) -> usize {
     match state {
-        SlimeAnimState::Idle => sprites.idle.clone(),
-        SlimeAnimState::Shoot => sprites.shoot.clone(),
-        SlimeAnimState::Dead => sprites.dead.clone(),
-    }
-}
-
-fn slime_layout_for_state(
-    sprites: &SlimeSprites,
-    state: SlimeAnimState,
-) -> Handle<TextureAtlasLayout> {
-    match state {
-        SlimeAnimState::Idle | SlimeAnimState::Dead => sprites.layout.clone(),
-        SlimeAnimState::Shoot => sprites.shoot_layout.clone(),
-    }
-}
-
-fn slime_frames_for_state(sprites: &SlimeSprites, state: SlimeAnimState) -> usize {
-    match state {
-        SlimeAnimState::Idle => sprites.idle_frames,
-        SlimeAnimState::Shoot => sprites.shoot_frames,
-        SlimeAnimState::Dead => sprites.dead_frames,
-    }
-}
-
-fn slime_fps_for_state(state: SlimeAnimState) -> f32 {
-    match state {
-        SlimeAnimState::Idle => 8.0,
-        SlimeAnimState::Shoot => 12.0,
-        SlimeAnimState::Dead => 10.0,
+        SlimeAnimState::Idle => 7,
+        SlimeAnimState::Shoot => 10,
+        SlimeAnimState::Dead => 7,
     }
 }
 
 pub fn animate_slime(
     time: Res<Time>,
-    sprites: Option<Res<SlimeSprites>>,
     mut query: Query<
         (&mut Sprite, &mut SlimeAnim),
         (With<Enemy>, Without<ChargingTelegraph>, Without<FlashTimer>),
     >,
 ) {
-    let Some(sprites) = sprites else {
-        return;
-    };
-
     for (mut sprite, mut anim) in &mut query {
-        // For now, slime just idles. State changes can be triggered by combat system later.
-        let desired_state = anim.state; // Keep current state
-
-        if anim.state != desired_state {
-            anim.state = desired_state;
-            anim.frame = 0;
-            anim.timer = Timer::from_seconds(
-                1.0 / slime_fps_for_state(desired_state),
-                TimerMode::Repeating,
-            );
-
-            sprite.image = slime_animation_for_state(&sprites, desired_state);
-            sprite.texture_atlas = Some(TextureAtlas {
-                layout: slime_layout_for_state(&sprites, desired_state),
-                index: 0,
-            });
-        }
-
+        // Tick the animation timer
         anim.timer.tick(time.delta());
-        if anim.timer.is_finished() {
-            let frame_count = slime_frames_for_state(&sprites, anim.state);
+
+        if anim.timer.just_finished() {
+            let frame_count = slime_frames_for_state(anim.state);
             anim.frame = (anim.frame + 1) % frame_count;
+
+            // Update texture atlas index
             if let Some(atlas) = sprite.texture_atlas.as_mut() {
                 atlas.index = anim.frame;
             }

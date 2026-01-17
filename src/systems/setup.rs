@@ -1,9 +1,10 @@
 use bevy::audio::{AudioPlayer, AudioSource, PlaybackSettings, Volume};
+use bevy::image::TextureAtlas;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy::text::Justify;
 
-use crate::assets::{FighterSprites, ProjectileSprites, SlimeSprites};
+use crate::assets::{FighterSprites, ProjectileSprites};
 use crate::components::{
     ActionBar, ActionChargeBar, ActionCooldownOverlay, ActionKeyText, ActionSlot, ActionSlotUI,
     ActionType, ArenaConfig, BaseColor, CleanupOnStateExit, Enemy, EnemyConfig, FighterAnim,
@@ -162,43 +163,6 @@ pub fn setup_arena(
     ));
 
     // ========================================================================
-    // Slime sprite sheets (16x16 frames, 3 columns per row)
-    // ========================================================================
-    // IDLE - WALK: 48x48 = 3x3 grid, 7 frames used
-    // DEAD: 48x48 = 3x3 grid, 7 frames used
-    // SHOOTING: 48x64 = 3x4 grid, 10 frames used
-    let slime_idle_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
-        UVec2::new(16, 16),
-        3, // 3 columns
-        3, // 3 rows
-        None,
-        None,
-    ));
-
-    let slime_shoot_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
-        UVec2::new(16, 16),
-        3, // 3 columns
-        4, // 4 rows
-        None,
-        None,
-    ));
-
-    let slime_idle = asset_server.load("enemies/slime/IDLE - WALK.png");
-    let slime_shoot = asset_server.load("enemies/slime/SHOOTING.png");
-    let slime_dead = asset_server.load("enemies/slime/DEAD.png");
-
-    commands.insert_resource(SlimeSprites {
-        layout: slime_idle_layout.clone(),
-        shoot_layout: slime_shoot_layout,
-        idle: slime_idle.clone(),
-        shoot: slime_shoot.clone(),
-        dead: slime_dead.clone(),
-        idle_frames: 7,
-        shoot_frames: 10,
-        dead_frames: 7,
-    });
-
-    // ========================================================================
     // Projectile sprites
     // ========================================================================
     let blaster_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
@@ -234,9 +198,9 @@ pub fn setup_arena(
     for enemy_config in &config.enemies {
         spawn_enemy(
             &mut commands,
+            &asset_server,
+            &mut atlas_layouts,
             enemy_config,
-            &slime_idle,
-            &slime_idle_layout,
             0, // TODO: Pass wave level for HP scaling
             &layout,
         );
@@ -247,10 +211,9 @@ pub fn setup_arena(
 /// This is the unified spawn function for all enemy types
 fn spawn_enemy(
     commands: &mut Commands,
+    asset_server: &AssetServer,
+    atlas_layouts: &mut Assets<TextureAtlasLayout>,
     config: &EnemyConfig,
-    // For now, pass slime sprites - will be generalized later
-    texture: &Handle<Image>,
-    atlas_layout: &Handle<TextureAtlasLayout>,
     wave_level: i32,
     arena_layout: &ArenaLayout,
 ) {
@@ -264,13 +227,33 @@ fn spawn_enemy(
 
     // Get visuals from blueprint
     let visuals = &blueprint.visuals;
+    let anims = &visuals.animations;
+
+    // Load sprite from blueprint path
+    let sprite_path = format!("{}/{}", visuals.sprite_path, anims.idle_file);
+    let texture: Handle<Image> = asset_server.load(&sprite_path);
+
+    // Create atlas layout from blueprint animation config
+    let atlas_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
+        UVec2::new(16, 16), // Frame size (TODO: make configurable in blueprint)
+        anims.idle_grid.0 as u32,
+        anims.idle_grid.1 as u32,
+        None,
+        None,
+    ));
+
+    // Calculate FPS from blueprint
+    let frame_duration = 1.0 / anims.idle_fps;
 
     let enemy_entity = commands
         .spawn((
             // Sprite setup from blueprint visuals (scaled to arena)
             Sprite {
-                image: texture.clone(),
-                texture_atlas: Some(atlas_layout.clone().into()),
+                image: texture,
+                texture_atlas: Some(TextureAtlas {
+                    layout: atlas_layout,
+                    index: 0,
+                }),
                 color: Color::WHITE,
                 custom_size: Some(arena_layout.scale_vec2(visuals.draw_size)),
                 flip_x: visuals.flip_x,
@@ -290,7 +273,7 @@ fn spawn_enemy(
             SlimeAnim {
                 state: SlimeAnimState::Idle,
                 frame: 0,
-                timer: Timer::from_seconds(0.12, TimerMode::Repeating),
+                timer: Timer::from_seconds(frame_duration, TimerMode::Repeating),
             },
             // Core enemy markers
             Enemy,
@@ -550,6 +533,18 @@ pub fn cleanup_splash_entities(
 pub fn cleanup_menu_entities(mut commands: Commands, query: Query<(Entity, &CleanupOnStateExit)>) {
     for (entity, scoped) in &query {
         if scoped.0 == GameState::MainMenu {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Cleanup for when leaving Campaign state
+pub fn cleanup_campaign_entities(
+    mut commands: Commands,
+    query: Query<(Entity, &CleanupOnStateExit)>,
+) {
+    for (entity, scoped) in &query {
+        if scoped.0 == GameState::Campaign {
             commands.entity(entity).despawn();
         }
     }
