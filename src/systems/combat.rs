@@ -19,7 +19,11 @@ pub fn bullet_movement(
     time: Res<Time>,
     mut query: Query<
         (Entity, &mut GridPosition, &mut MoveTimer),
-        (With<Bullet>, Without<EnemyBullet>),
+        (
+            With<Bullet>,
+            Without<EnemyBullet>,
+            Without<crate::components::ProjectileImmobile>,
+        ),
     >,
 ) {
     for (entity, mut pos, mut timer) in &mut query {
@@ -38,7 +42,13 @@ pub fn bullet_movement(
 pub fn enemy_bullet_movement(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut GridPosition, &mut MoveTimer), With<EnemyBullet>>,
+    mut query: Query<
+        (Entity, &mut GridPosition, &mut MoveTimer),
+        (
+            With<EnemyBullet>,
+            Without<crate::components::ProjectileImmobile>,
+        ),
+    >,
 ) {
     for (entity, mut pos, mut timer) in &mut query {
         timer.0.tick(time.delta());

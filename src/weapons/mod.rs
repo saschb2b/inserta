@@ -421,7 +421,7 @@ impl Plugin for WeaponPlugin {
 
 use crate::components::{
     Bullet, Enemy, EnemyBullet, FlashTimer, GridPosition, Health, HealthText, Lifetime, MoveTimer,
-    MuzzleFlash, Player, ProjectileHit, RenderConfig, TargetsTiles,
+    MuzzleFlash, Player, ProjectileHit, ProjectileImmobile, RenderConfig, TargetsTiles,
 };
 use crate::constants::*;
 
@@ -619,15 +619,15 @@ pub fn projectile_hit_system(
                 health.current -= final_damage;
 
                 // Transition projectile to impact state instead of despawning immediately
-                commands
-                    .entity(bullet_entity)
-                    .insert(crate::assets::ProjectileAnimation {
+                commands.entity(bullet_entity).insert((
+                    crate::assets::ProjectileAnimation {
                         frame_indices: [0, 1, 2, 3],
                         state: crate::assets::ProjectileAnimationState::Impact,
                         timer: Timer::from_seconds(0.1, TimerMode::Once), // Short duration for impact
-                    });
-                // Mark as hit so it will despawn after finish state
-                commands.entity(bullet_entity).insert(ProjectileHit);
+                    },
+                    ProjectileHit, // Mark as hit so it will despawn after finish state
+                    ProjectileImmobile, // Stop moving during animation
+                ));
 
                 // Update HP text
                 for child in children.iter() {

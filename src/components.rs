@@ -128,6 +128,10 @@ pub struct EnemyBullet;
 #[derive(Component)]
 pub struct ProjectileHit;
 
+/// Marker for projectiles that should not move (hit and animating)
+#[derive(Component)]
+pub struct ProjectileImmobile;
+
 #[derive(Component)]
 pub struct MuzzleFlash;
 
