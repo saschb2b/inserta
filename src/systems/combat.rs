@@ -313,7 +313,7 @@ pub fn projectile_animation_system(
         // Set the sprite to show the correct frame from the 4-frame spritesheet
         // The blaster spritesheet is 64x16 (4 frames of 16x16 each)
         sprite.image = projectiles.blaster_image.clone();
-        sprite.custom_size = Some(Vec2::new(16.0, 16.0));
+        sprite.custom_size = Some(BULLET_DRAW_SIZE);
         sprite.texture_atlas = Some(TextureAtlas {
             layout: projectiles.blaster_layout.clone(),
             index: frame_index,

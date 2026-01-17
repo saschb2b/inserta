@@ -539,7 +539,7 @@ fn spawn_projectile(
                 layout: projectiles.blaster_layout.clone(),
                 index: 1, // Start at travel frame
             }),
-            custom_size: Some(Vec2::new(16.0, 16.0)),
+            custom_size: Some(BULLET_DRAW_SIZE),
             ..default()
         },
         Transform::default(),
