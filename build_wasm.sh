@@ -4,10 +4,15 @@ set -e
 # Ensure the target is installed
 rustup target add wasm32-unknown-unknown
 
-# Check if wasm-bindgen-cli is installed
-if ! command -v wasm-bindgen &> /dev/null; then
-    echo "wasm-bindgen-cli could not be found. Installing..."
-    cargo install wasm-bindgen-cli
+# Get wasm-bindgen version from Cargo.lock to ensure CLI matches
+WASM_BINDGEN_VERSION=$(grep -A1 'name = "wasm-bindgen"' Cargo.lock | grep version | head -1 | sed 's/.*"\(.*\)"/\1/')
+echo "Detected wasm-bindgen version in Cargo.lock: $WASM_BINDGEN_VERSION"
+
+# Check if wasm-bindgen-cli is installed with correct version
+INSTALLED_VERSION=$(wasm-bindgen --version 2>/dev/null | sed 's/wasm-bindgen //' || echo "none")
+if [ "$INSTALLED_VERSION" != "$WASM_BINDGEN_VERSION" ]; then
+    echo "Installing wasm-bindgen-cli version $WASM_BINDGEN_VERSION (currently: $INSTALLED_VERSION)..."
+    cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION"
 fi
 
 echo "Building for WASM..."
