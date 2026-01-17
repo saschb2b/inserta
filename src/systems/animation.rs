@@ -2,7 +2,11 @@ use bevy::image::TextureAtlas;
 use bevy::prelude::*;
 
 use crate::assets::{FighterSprites, SlimeSprites};
-use crate::components::{Enemy, FighterAnim, FighterAnimState, Player, SlimeAnim, SlimeAnimState};
+use crate::components::{
+    Enemy, FighterAnim, FighterAnimState, FlashTimer, Player, SlimeAnim, SlimeAnimState,
+};
+use crate::enemies::ChargingTelegraph;
+use crate::systems::actions::HealFlashTimer;
 
 fn movement_pressed(keys: &ButtonInput<KeyCode>) -> bool {
     keys.pressed(KeyCode::KeyW)
@@ -43,7 +47,7 @@ pub fn animate_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     sprites: Option<Res<FighterSprites>>,
-    mut query: Query<(&mut Sprite, &mut FighterAnim), With<Player>>,
+    mut query: Query<(&mut Sprite, &mut FighterAnim), (With<Player>, Without<HealFlashTimer>)>,
 ) {
     let Some(sprites) = sprites else {
         return;
@@ -123,7 +127,10 @@ fn slime_fps_for_state(state: SlimeAnimState) -> f32 {
 pub fn animate_slime(
     time: Res<Time>,
     sprites: Option<Res<SlimeSprites>>,
-    mut query: Query<(&mut Sprite, &mut SlimeAnim), With<Enemy>>,
+    mut query: Query<
+        (&mut Sprite, &mut SlimeAnim),
+        (With<Enemy>, Without<ChargingTelegraph>, Without<FlashTimer>),
+    >,
 ) {
     let Some(sprites) = sprites else {
         return;

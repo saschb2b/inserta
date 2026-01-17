@@ -46,29 +46,44 @@ impl Default for FighterConfig {
 /// Configuration for spawning an enemy
 #[derive(Clone, Debug)]
 pub struct EnemyConfig {
-    pub enemy_type: EnemyType,
+    pub enemy_id: EnemyId,
     pub start_x: i32,
     pub start_y: i32,
-    pub max_hp: i32,
+    /// Override HP (if None, uses blueprint's scaled HP)
+    pub hp_override: Option<i32>,
 }
 
 impl Default for EnemyConfig {
     fn default() -> Self {
         Self {
-            enemy_type: EnemyType::Slime,
+            enemy_id: EnemyId::Slime,
             start_x: 4,
             start_y: 1,
-            max_hp: 100,
+            hp_override: None,
         }
     }
 }
 
-/// Types of enemies
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub enum EnemyType {
-    #[default]
-    Slime,
+impl EnemyConfig {
+    /// Create a config for a specific enemy type at a position
+    pub fn new(enemy_id: EnemyId, x: i32, y: i32) -> Self {
+        Self {
+            enemy_id,
+            start_x: x,
+            start_y: y,
+            hp_override: None,
+        }
+    }
+
+    /// Create a config with specific HP
+    pub fn with_hp(mut self, hp: i32) -> Self {
+        self.hp_override = Some(hp);
+        self
+    }
 }
+
+/// Types of enemies - re-export from enemies module for convenience
+pub use crate::enemies::EnemyId;
 
 /// Configuration for a complete arena battle
 #[derive(Resource, Clone, Debug)]

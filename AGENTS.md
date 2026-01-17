@@ -26,7 +26,14 @@ This repo is a small Bevy (Rust) prototype for a Mega Man Battle Network–style
   - `animation.rs`: Player sprite-sheet animation
   - `actions.rs`: Action system (special abilities with cooldowns)
   - `action_ui.rs`: Action bar UI at bottom of screen
-  - `enemy_ai.rs`: Enemy movement and shooting AI
+  - `enemy_ai.rs`: Legacy enemy AI (deprecated, use enemies/ instead)
+- `src/enemies/` **NEW - Composable Enemy System**
+  - `mod.rs`: EnemyPlugin registration
+  - `components.rs`: EnemyStats, EnemyMovement, EnemyAttack, EnemyTraitContainer
+  - `behaviors.rs`: MovementBehavior and AttackBehavior enums
+  - `blueprints.rs`: EnemyBlueprint definitions (add new enemies here!)
+  - `visuals.rs`: EnemyVisuals and EnemyAnimations config
+  - `systems.rs`: Behavior execution systems
 - `src/weapons/`
   - `mod.rs`: Weapon system (stats, components, plugin, systems)
   - `blaster.rs`: Blaster weapon implementation
@@ -78,6 +85,138 @@ The default starting weapon - a reliable energy pistol that rewards skilled timi
 2. Implement `weapon_stats()` function returning `WeaponStats`
 3. Add variant to `WeaponType` enum in `weapons/mod.rs`
 4. Add match arm in `WeaponType::stats()`
+
+## Enemy System (Composable Behaviors)
+Enemies are defined using a **blueprint system** - combine stats, movement, attacks, and traits like LEGO blocks.
+
+### Architecture Overview
+```
+EnemyBlueprint {
+    id: EnemyId,           // Unique identifier
+    name: &str,            // Display name
+    stats: EnemyStats,     // HP, damage, speed multipliers
+    movement: MovementBehavior,  // How it moves
+    attack: AttackBehavior,      // How it attacks
+    traits: EnemyTraits,         // Optional modifiers
+    visuals: EnemyVisuals,       // Sprite config
+}
+```
+
+### Adding a New Enemy (Step by Step)
+
+**Step 1: Add to `EnemyId` enum** (`src/enemies/components.rs`)
+```rust
+pub enum EnemyId {
+    Slime,
+    Mettaur,  // <- Add your new enemy here
+}
+```
+
+**Step 2: Create blueprint function** (`src/enemies/blueprints.rs`)
+```rust
+fn mettaur_blueprint() -> EnemyBlueprint {
+    EnemyBlueprint {
+        id: EnemyId::Mettaur,
+        name: "Mettaur",
+        stats: EnemyStats {
+            base_hp: 40,
+            contact_damage: 10,
+            move_speed: 0.8,
+            attack_speed: 1.0,
+        },
+        movement: MovementBehavior::HideAndPeek {
+            hide_duration: 2.0,
+            peek_duration: 1.5,
+        },
+        attack: AttackBehavior::ShockWave {
+            damage: 20,
+            speed: 6.0,
+            charge_time: 0.3,
+        },
+        traits: EnemyTraits::default(),
+        visuals: EnemyVisuals {
+            sprite_path: "enemies/mettaur".into(),
+            draw_size: Vec2::new(96.0, 96.0),
+            anchor: Vec2::new(0.0, -0.35),
+            offset: Vec2::ZERO,
+            flip_x: true,
+            animations: EnemyAnimations::default(),
+        },
+    }
+}
+```
+
+**Step 3: Register in `EnemyBlueprint::get()`** (`src/enemies/blueprints.rs`)
+```rust
+pub fn get(id: EnemyId) -> Self {
+    match id {
+        EnemyId::Slime => slime_blueprint(),
+        EnemyId::Mettaur => mettaur_blueprint(),  // <- Add match arm
+    }
+}
+```
+
+**Step 4: Add sprite assets** (`assets/enemies/mettaur/`)
+- `IDLE.png` - Idle animation sprite sheet
+- `ATTACK.png` - Attack animation (optional)
+- `DEAD.png` - Death animation (optional)
+
+### Available Movement Behaviors
+| Behavior | Description |
+|----------|-------------|
+| `Stationary` | Doesn't move (turrets) |
+| `Random { idle_chance }` | Random movement, chance to stay still |
+| `ChaseRow` | Moves to match player's Y position |
+| `ChasePlayer` | Moves toward player (stays in territory) |
+| `PatrolHorizontal` | Patrols left-right |
+| `PatrolVertical` | Patrols up-down |
+| `HideAndPeek { hide_duration, peek_duration }` | Mettaur-style hide/attack |
+| `Teleport { min_interval, max_interval }` | Random teleportation |
+| `BackRowOnly` | Stays at back, moves vertically |
+| `MirrorPlayer` | Mirrors player Y position |
+| `Advance { max_advance }` | Gradually advances toward player |
+
+### Available Attack Behaviors
+| Behavior | Description |
+|----------|-------------|
+| `None` | No attack (contact damage only) |
+| `Projectile { damage, speed, charge_time }` | Single projectile |
+| `ProjectileSpread { ..., row_offsets }` | Multiple projectiles |
+| `ShockWave { damage, speed, charge_time }` | Ground wave attack |
+| `Melee { damage, range, charge_time }` | Close range attack |
+| `AreaAttack { damage, charge_time, pattern }` | Multi-tile attack |
+| `Bomb { damage, fuse_time, radius }` | Delayed explosion |
+| `LaserBeam { damage, charge_time, duration }` | Instant row hit |
+| `Summon { summon_id, max_summons, charge_time }` | Spawns minions |
+
+### Available Enemy Traits
+| Trait | Description |
+|-------|-------------|
+| `armor: i32` | Flat damage reduction |
+| `hp_regen_per_sec: f32` | HP regeneration |
+| `super_armor: bool` | Immune to flinching |
+| `elemental_resist: f32` | Elemental damage reduction |
+| `death_explosion` | Explodes on death |
+| `death_spawn` | Spawns minions on death |
+| `enrage` | Gets stronger at low HP |
+| `phase_immunity` | Periodic invulnerability |
+
+### Spawning Enemies in Battle
+Use `EnemyConfig` in `ArenaConfig`:
+```rust
+ArenaConfig {
+    enemies: vec![
+        EnemyConfig::new(EnemyId::Slime, 4, 1),           // Default HP
+        EnemyConfig::new(EnemyId::Mettaur, 5, 0).with_hp(80),  // Custom HP
+    ],
+    ..default()
+}
+```
+
+### Current Limitations
+- **Player position**: Movement behaviors that need player position (ChasePlayer, MirrorPlayer) currently don't track the player to avoid query conflicts. Will be fixed with a shared resource.
+- **Animation**: Still uses legacy `SlimeAnim` component. Full animation generalization is TODO.
+- **Traits**: HP regen and enrage are defined but systems are disabled to avoid query conflicts.
 
 ## Action System
 The fighter has 3 action slots. Actions are special abilities separate from the equipped weapon.

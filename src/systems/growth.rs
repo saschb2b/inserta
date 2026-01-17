@@ -3,7 +3,7 @@ use rand::Rng;
 use std::collections::HashSet;
 
 use crate::components::{
-    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyType, FighterConfig, GameState,
+    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyId, FighterConfig, GameState,
 };
 use crate::resources::{GameProgress, PlayerCurrency, PlayerUpgrades};
 use crate::systems::shop::{ShopAction, ShopButtonAction}; // Import from shop for reuse
@@ -506,12 +506,7 @@ fn start_battle(commands: &mut Commands, progress: &GameProgress) {
         // Vary column slightly (4 or 5)
         let col = rng.random_range(4..=5);
 
-        enemies.push(EnemyConfig {
-            enemy_type: EnemyType::Slime,
-            start_x: col,
-            start_y: row,
-            max_hp: enemy_hp,
-        });
+        enemies.push(EnemyConfig::new(EnemyId::Slime, col, row).with_hp(enemy_hp));
     }
 
     let config = ArenaConfig {

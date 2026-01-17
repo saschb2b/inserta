@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyType, FighterConfig, GameState,
+    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyId, FighterConfig, GameState,
 };
 
 /// Marker for the main menu container
@@ -121,12 +121,7 @@ pub fn handle_menu_selection(
                                 ActionType::WideSword,
                             ],
                         },
-                        enemies: vec![EnemyConfig {
-                            enemy_type: EnemyType::Slime,
-                            start_x: 4,
-                            start_y: 1,
-                            max_hp: 100,
-                        }],
+                        enemies: vec![EnemyConfig::new(EnemyId::Slime, 4, 1).with_hp(100)],
                     };
                     commands.insert_resource(config);
                     next_state.set(GameState::Playing);

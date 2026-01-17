@@ -1,13 +1,30 @@
+// ============================================================================
+// Legacy Enemy AI - for backward compatibility
+// ============================================================================
+//
+// NOTE: This module contains the OLD enemy AI systems.
+// New enemies should use the behavior system in src/enemies/ instead.
+// These systems only run on enemies that DON'T have the BehaviorEnemy marker.
+//
+// The new system provides:
+// - Composable MovementBehavior (random, chase, patrol, teleport, etc.)
+// - Composable AttackBehavior (projectile, melee, area, laser, etc.)
+// - Composable EnemyTraits (armor, regen, enrage, etc.)
+//
+// See src/enemies/blueprints.rs for how to define new enemies.
+
 use bevy::prelude::*;
 use rand::Rng;
 
 use crate::components::*;
 use crate::constants::*;
+use crate::enemies::BehaviorEnemy;
 
-/// Enemy AI: random movement within enemy territory
+/// Legacy enemy AI: random movement within enemy territory
+/// Only runs on enemies WITHOUT the BehaviorEnemy marker
 pub fn enemy_movement(
     time: Res<Time>,
-    mut query: Query<(&mut GridPosition, &mut EnemyAI), With<Enemy>>,
+    mut query: Query<(&mut GridPosition, &mut EnemyAI), (With<Enemy>, Without<BehaviorEnemy>)>,
 ) {
     let mut rng = rand::rng();
 
@@ -39,11 +56,15 @@ pub fn enemy_movement(
     }
 }
 
-/// Enemy AI: shoot projectiles toward player
+/// Legacy enemy AI: shoot projectiles toward player
+/// Only runs on enemies WITHOUT the BehaviorEnemy marker
 pub fn enemy_shoot(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(&GridPosition, &mut EnemyAI, &mut Sprite, &BaseColor), With<Enemy>>,
+    mut query: Query<
+        (&GridPosition, &mut EnemyAI, &mut Sprite, &BaseColor),
+        (With<Enemy>, Without<BehaviorEnemy>),
+    >,
 ) {
     for (pos, mut ai, mut sprite, base_color) in &mut query {
         // Check if we are currently charging a shot

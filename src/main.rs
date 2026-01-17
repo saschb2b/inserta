@@ -9,12 +9,14 @@ use bevy::prelude::*;
 mod assets;
 mod components;
 mod constants;
+mod enemies;
 mod resources;
 mod systems;
 mod weapons;
 
 use components::{GameState, InputCooldown};
 use constants::MOVE_COOLDOWN;
+use enemies::EnemyPlugin;
 use resources::{GameProgress, PlayerCurrency, PlayerUpgrades, WaveState};
 use systems::{
     action_ui::update_action_bar_ui,
@@ -29,7 +31,7 @@ use systems::{
         update_wave_state,
     },
     common::update_transforms,
-    enemy_ai::{enemy_movement, enemy_shoot},
+    // enemy_ai::{enemy_movement, enemy_shoot},  // Replaced by enemies::EnemyPlugin
     growth::{GrowthTreeState, cleanup_growth, setup_growth_tree, update_growth_tree},
     menu::{cleanup_menu, handle_menu_selection, setup_menu, update_menu_visuals},
     player::move_player,
@@ -67,6 +69,8 @@ fn main() {
         .init_resource::<GrowthTreeState>()
         // Weapon system plugin
         .add_plugins(WeaponPlugin)
+        // Enemy behavior system plugin
+        .add_plugins(EnemyPlugin)
         // State management
         .init_state::<GameState>()
         // ====================================================================
@@ -118,11 +122,18 @@ fn main() {
                 action_input,
                 // Animation
                 animate_player,
-                animate_slime,
-                // Enemy AI
-                enemy_movement,
-                enemy_shoot,
             )
+                .run_if(in_state(GameState::Playing)),
+        )
+        // Enemy animation and effects - chained to avoid Sprite conflicts
+        .add_systems(
+            Update,
+            (
+                animate_slime,
+                enemies::animate_charging_telegraph,
+                entity_flash,
+            )
+                .chain()
                 .run_if(in_state(GameState::Playing)),
         )
         .add_systems(
@@ -150,8 +161,7 @@ fn main() {
         .add_systems(
             Update,
             (
-                // Effects
-                entity_flash,
+                // Other effects
                 heal_flash_effect,
                 muzzle_lifetime,
                 // UI

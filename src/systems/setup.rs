@@ -6,11 +6,15 @@ use bevy::text::Justify;
 use crate::assets::{FighterSprites, SlimeSprites};
 use crate::components::{
     ActionBar, ActionChargeBar, ActionCooldownOverlay, ActionKeyText, ActionSlot, ActionSlotUI,
-    ActionType, ArenaConfig, BaseColor, CleanupOnStateExit, Enemy, EnemyAI, EnemyConfig, EnemyType,
-    FighterAnim, FighterAnimState, GameState, GridPosition, Health, HealthText, Player,
-    PlayerHealthText, RenderConfig, SlimeAnim, SlimeAnimState,
+    ActionType, ArenaConfig, BaseColor, CleanupOnStateExit, Enemy, EnemyConfig, FighterAnim,
+    FighterAnimState, GameState, GridPosition, Health, HealthText, Player, PlayerHealthText,
+    RenderConfig, SlimeAnim, SlimeAnimState,
 };
 use crate::constants::*;
+use crate::enemies::{
+    BehaviorEnemy, EnemyAnimState, EnemyAttack, EnemyBlueprint, EnemyMovement, EnemyStats,
+    EnemyTraitContainer,
+};
 use crate::resources::{PlayerUpgrades, WaveState};
 use crate::systems::arena::spawn_arena_visuals;
 use crate::weapons::{EquippedWeapon, WeaponState, WeaponType};
@@ -178,70 +182,96 @@ pub fn setup_arena(
     });
 
     // ========================================================================
-    // Enemies (from config)
+    // Enemies (from config) - using the new blueprint system
     // ========================================================================
     for enemy_config in &config.enemies {
-        match enemy_config.enemy_type {
-            EnemyType::Slime => {
-                spawn_slime(
-                    &mut commands,
-                    slime_idle.clone(),
-                    slime_idle_layout.clone(),
-                    enemy_config,
-                );
-            }
-        }
+        spawn_enemy(
+            &mut commands,
+            enemy_config,
+            &slime_idle,
+            &slime_idle_layout,
+            0, // TODO: Pass wave level for HP scaling
+        );
     }
 }
 
-/// Spawn a slime enemy
-fn spawn_slime(
+/// Spawn an enemy using the blueprint system
+/// This is the unified spawn function for all enemy types
+fn spawn_enemy(
     commands: &mut Commands,
-    texture: Handle<Image>,
-    layout: Handle<TextureAtlasLayout>,
     config: &EnemyConfig,
+    // For now, pass slime sprites - will be generalized later
+    texture: &Handle<Image>,
+    layout: &Handle<TextureAtlasLayout>,
+    wave_level: i32,
 ) {
+    // Get the blueprint for this enemy type
+    let blueprint = EnemyBlueprint::get(config.enemy_id);
+
+    // Calculate HP (use override or scaled from blueprint)
+    let hp = config
+        .hp_override
+        .unwrap_or_else(|| blueprint.scaled_hp(wave_level));
+
+    // Get visuals from blueprint
+    let visuals = &blueprint.visuals;
+
     let enemy_entity = commands
         .spawn((
+            // Sprite setup from blueprint visuals
             Sprite {
-                image: texture,
-                texture_atlas: Some(layout.into()),
+                image: texture.clone(),
+                texture_atlas: Some(layout.clone().into()),
                 color: Color::WHITE,
-                custom_size: Some(SLIME_DRAW_SIZE),
-                flip_x: true, // Mirror to face left (toward player)
+                custom_size: Some(visuals.draw_size),
+                flip_x: visuals.flip_x,
                 ..default()
             },
-            Anchor(SLIME_ANCHOR),
+            Anchor(visuals.anchor),
             Transform::default(),
             GridPosition {
                 x: config.start_x,
                 y: config.start_y,
             },
             RenderConfig {
-                offset: SLIME_OFFSET,
+                offset: visuals.offset,
                 base_z: Z_CHARACTER,
             },
+            // Legacy animation component (for backward compatibility)
             SlimeAnim {
                 state: SlimeAnimState::Idle,
                 frame: 0,
                 timer: Timer::from_seconds(0.12, TimerMode::Repeating),
             },
+            // Core enemy markers
             Enemy,
+            BehaviorEnemy, // Mark as using new behavior system
             Health {
-                current: config.max_hp,
-                max: config.max_hp,
-            },
-            EnemyAI {
-                move_timer: Timer::from_seconds(ENEMY_MOVE_COOLDOWN, TimerMode::Repeating),
-                shoot_timer: Timer::from_seconds(ENEMY_SHOOT_COOLDOWN, TimerMode::Repeating),
-                charge_timer: None,
+                current: hp,
+                max: hp,
             },
             BaseColor(Color::WHITE),
             CleanupOnStateExit(GameState::Playing),
         ))
         .id();
 
+    // Add behavior components separately (to avoid tuple size limits)
+    commands.entity(enemy_entity).insert((
+        EnemyStats {
+            base_hp: blueprint.stats.base_hp,
+            contact_damage: blueprint.stats.contact_damage,
+            move_speed: blueprint.stats.move_speed,
+            attack_speed: blueprint.stats.attack_speed,
+        },
+        EnemyMovement::new(blueprint.movement.clone(), blueprint.stats.move_speed),
+        EnemyAttack::new(blueprint.attack.clone(), blueprint.stats.attack_speed),
+        EnemyTraitContainer::new(blueprint.traits.clone()),
+        EnemyAnimState::default(),
+    ));
+
+    // Spawn HP display as children
     commands.entity(enemy_entity).with_children(|parent| {
+        // HP plate background
         parent.spawn((
             Sprite {
                 color: COLOR_HP_PLATE,
@@ -251,8 +281,9 @@ fn spawn_slime(
             Transform::from_xyz(0.0, 80.0, 0.0),
         ));
 
+        // HP text shadow
         parent.spawn((
-            Text2d::new(config.max_hp.to_string()),
+            Text2d::new(hp.to_string()),
             TextLayout::new_with_justify(Justify::Center),
             TextFont::from_font_size(20.0),
             TextColor(COLOR_TEXT_SHADOW),
@@ -260,8 +291,9 @@ fn spawn_slime(
             HealthText,
         ));
 
+        // HP text
         parent.spawn((
-            Text2d::new(config.max_hp.to_string()),
+            Text2d::new(hp.to_string()),
             TextLayout::new_with_justify(Justify::Center),
             TextFont::from_font_size(20.0),
             TextColor(COLOR_TEXT),

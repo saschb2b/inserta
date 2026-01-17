@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::ui::RepeatedGridTrack;
 
 use crate::components::{
-    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyType, FighterConfig, GameState,
+    ActionType, ArenaConfig, CleanupOnStateExit, EnemyConfig, EnemyId, FighterConfig, GameState,
 };
 use crate::resources::{GameProgress, PlayerCurrency, PlayerUpgrades};
 
@@ -334,12 +334,7 @@ fn start_battle(commands: &mut Commands, progress: &GameProgress) {
             max_hp: 100, // This is overridden by PlayerUpgrades in setup_arena
             actions: vec![ActionType::Heal, ActionType::Shield, ActionType::WideSword],
         },
-        enemies: vec![EnemyConfig {
-            enemy_type: EnemyType::Slime,
-            start_x: 4,
-            start_y: 1,
-            max_hp: enemy_hp,
-        }],
+        enemies: vec![EnemyConfig::new(EnemyId::Slime, 4, 1).with_hp(enemy_hp)],
     };
     commands.insert_resource(config);
 }
