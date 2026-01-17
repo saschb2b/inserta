@@ -124,6 +124,10 @@ pub struct Bullet;
 #[derive(Component)]
 pub struct EnemyBullet;
 
+/// Marker for projectiles that have hit (in impact/finish animation)
+#[derive(Component)]
+pub struct ProjectileHit;
+
 #[derive(Component)]
 pub struct MuzzleFlash;
 

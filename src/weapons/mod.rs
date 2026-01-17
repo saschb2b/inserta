@@ -420,8 +420,8 @@ impl Plugin for WeaponPlugin {
 // ============================================================================
 
 use crate::components::{
-    Bullet, Enemy, FlashTimer, GridPosition, Health, HealthText, Lifetime, MoveTimer, MuzzleFlash,
-    Player, RenderConfig, TargetsTiles,
+    Bullet, Enemy, EnemyBullet, FlashTimer, GridPosition, Health, HealthText, Lifetime, MoveTimer,
+    MuzzleFlash, Player, ProjectileHit, RenderConfig, TargetsTiles,
 };
 use crate::constants::*;
 
@@ -603,7 +603,10 @@ pub fn weapon_cooldown_system(time: Res<Time>, mut query: Query<&mut WeaponState
 /// Handle projectiles hitting enemies (with proper damage calculation)
 pub fn projectile_hit_system(
     mut commands: Commands,
-    projectile_query: Query<(Entity, &GridPosition, &Projectile), With<Bullet>>,
+    projectile_query: Query<
+        (Entity, &GridPosition, &Projectile),
+        (With<Bullet>, Without<EnemyBullet>),
+    >,
     mut enemy_query: Query<(Entity, &GridPosition, &mut Health, &Children), With<Enemy>>,
     mut text_query: Query<&mut Text2d, With<HealthText>>,
 ) {
@@ -614,7 +617,17 @@ pub fn projectile_hit_system(
                 let final_damage = projectile.calculate_damage(bullet_pos.x);
 
                 health.current -= final_damage;
-                commands.entity(bullet_entity).despawn();
+
+                // Transition projectile to impact state instead of despawning immediately
+                commands
+                    .entity(bullet_entity)
+                    .insert(crate::assets::ProjectileAnimation {
+                        frame_indices: [0, 1, 2, 3],
+                        state: crate::assets::ProjectileAnimationState::Impact,
+                        timer: Timer::from_seconds(0.1, TimerMode::Once), // Short duration for impact
+                    });
+                // Mark as hit so it will despawn after finish state
+                commands.entity(bullet_entity).insert(ProjectileHit);
 
                 // Update HP text
                 for child in children.iter() {

@@ -27,6 +27,7 @@ pub fn bullet_movement(
         if timer.0.is_finished() {
             pos.x += 1;
             if pos.x >= GRID_WIDTH {
+                // Despawn off-screen projectiles (but not hit projectiles in animation)
                 commands.entity(entity).despawn();
             }
         }
@@ -44,6 +45,7 @@ pub fn enemy_bullet_movement(
         if timer.0.is_finished() {
             pos.x -= 1;
             if pos.x < 0 {
+                // Despawn off-screen projectiles (but not hit projectiles in animation)
                 commands.entity(entity).despawn();
             }
         }
@@ -299,14 +301,39 @@ pub fn check_victory_condition(
 
 /// Animate projectiles based on their state (launch, travel, impact, finish)
 pub fn projectile_animation_system(
-    mut query: Query<(&mut Sprite, &mut ProjectileAnimation), With<Bullet>>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Sprite, &mut ProjectileAnimation), With<Bullet>>,
     projectiles: Option<Res<ProjectileSprites>>,
+    time: Res<Time>,
 ) {
     let Some(projectiles) = projectiles else {
         return;
     };
 
-    for (mut sprite, anim) in &mut query {
+    for (entity, mut sprite, mut anim) in &mut query {
+        // Transition from Launch to Travel immediately (launch frame is just visual startup)
+        if anim.state == crate::assets::ProjectileAnimationState::Launch {
+            anim.state = crate::assets::ProjectileAnimationState::Travel;
+            anim.timer = Timer::from_seconds(0.0, TimerMode::Once);
+        }
+
+        // Update timer for state transitions
+        anim.timer.tick(time.delta());
+
+        // Transition to Finish if we've shown Impact long enough
+        if anim.state == crate::assets::ProjectileAnimationState::Impact && anim.timer.is_finished()
+        {
+            anim.state = crate::assets::ProjectileAnimationState::Finish;
+            anim.timer = Timer::from_seconds(0.1, TimerMode::Once); // Brief show of finish frame
+        }
+
+        // Despawn after Finish state animation completes
+        if anim.state == crate::assets::ProjectileAnimationState::Finish && anim.timer.is_finished()
+        {
+            commands.entity(entity).despawn();
+            continue;
+        }
+
         // Get the current frame index based on animation state
         let frame_index = anim.frame_indices[anim.state as usize];
 
