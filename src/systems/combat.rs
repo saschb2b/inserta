@@ -236,14 +236,13 @@ pub fn tile_attack_highlight(
         // When transitioning, fade alpha based on how close we are to the swap point
         let alpha = if highlight.intensity > 0.0 && highlight.intensity < 1.0 {
             // During transition: pulse slightly for visual interest
-            let fade_factor = if use_highlighted {
+            if use_highlighted {
                 // Fading in highlighted: start dimmer, get brighter
                 0.7 + 0.3 * (highlight.intensity - 0.5).abs() * 2.0
             } else {
                 // Fading out to normal: start slightly dim at boundary
                 0.85 + 0.15 * (0.5 - highlight.intensity).max(0.0) * 2.0
-            };
-            fade_factor
+            }
         } else {
             1.0
         };

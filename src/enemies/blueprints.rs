@@ -55,7 +55,7 @@ fn slime_blueprint() -> EnemyBlueprint {
         id: EnemyId::Slime,
         name: "Slime",
         stats: EnemyStats {
-            base_hp: 100,
+            base_hp: 40,
             contact_damage: 10,
             move_speed: 1.0,
             attack_speed: 0.5,
