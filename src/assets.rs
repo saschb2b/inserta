@@ -28,6 +28,8 @@ pub struct SlimeSprites {
 pub struct ProjectileSprites {
     pub blaster_image: Handle<Image>,
     pub blaster_layout: Handle<TextureAtlasLayout>,
+    pub blaster_charged_image: Handle<Image>,
+    pub blaster_charged_layout: Handle<TextureAtlasLayout>,
 }
 
 // ============================================================================
@@ -43,6 +45,8 @@ pub struct ProjectileAnimation {
     pub state: ProjectileAnimationState,
     /// Timer for transitioning between states
     pub timer: Timer,
+    /// Whether this is a charged projectile (affects sprite used)
+    pub is_charged: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
@@ -59,11 +63,12 @@ pub enum ProjectileAnimationState {
 
 impl ProjectileAnimation {
     /// Create a new projectile animation with standard 4-frame blaster layout
-    pub fn blaster() -> Self {
+    pub fn blaster(is_charged: bool) -> Self {
         Self {
             frame_indices: [0, 1, 2, 3], // frames 0-3 for blaster
             state: ProjectileAnimationState::Launch,
             timer: Timer::from_seconds(0.0, TimerMode::Once),
+            is_charged,
         }
     }
 }

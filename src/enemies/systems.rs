@@ -378,7 +378,7 @@ fn spawn_enemy_projectile(
         },
         Bullet,
         EnemyBullet,
-        ProjectileAnimation::blaster(),
+        ProjectileAnimation::blaster(false), // Enemy projectiles are not charged
         MoveTimer(Timer::from_seconds(move_timer, TimerMode::Repeating)),
         TargetsTiles::single(), // Highlight tile at projectile's position
     ));

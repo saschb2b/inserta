@@ -209,10 +209,23 @@ pub fn setup_arena(
         None,
     ));
 
+    let blaster_charged_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
+        UVec2::new(16, 16), // Each frame is 16x16
+        4,                  // 4 columns (launch, travel, impact, finish)
+        1,                  // 1 row
+        None,
+        None,
+    ));
+
     let blaster_projectile = asset_server.load("battle/attacks/projectile/blaster.png");
+    let blaster_charged_projectile =
+        asset_server.load("battle/attacks/projectile/blaster_charged.png");
+
     commands.insert_resource(ProjectileSprites {
         blaster_image: blaster_projectile,
         blaster_layout,
+        blaster_charged_image: blaster_charged_projectile,
+        blaster_charged_layout,
     });
 
     // ========================================================================

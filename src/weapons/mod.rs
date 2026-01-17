@@ -532,11 +532,24 @@ fn spawn_projectile(
 
     // Spawn projectile entity with sprite animation
     // The blaster projectile is 64x16 with 4 frames: launch, travel, impact, finish
+    // Choose sprite based on whether it's charged
+    let (sprite_image, sprite_layout) = if is_charged {
+        (
+            projectiles.blaster_charged_image.clone(),
+            projectiles.blaster_charged_layout.clone(),
+        )
+    } else {
+        (
+            projectiles.blaster_image.clone(),
+            projectiles.blaster_layout.clone(),
+        )
+    };
+
     commands.spawn((
         Sprite {
-            image: projectiles.blaster_image.clone(),
+            image: sprite_image,
             texture_atlas: Some(TextureAtlas {
-                layout: projectiles.blaster_layout.clone(),
+                layout: sprite_layout,
                 index: 1, // Start at travel frame
             }),
             custom_size: Some(BULLET_DRAW_SIZE),
@@ -562,7 +575,7 @@ fn spawn_projectile(
             falloff: stats.falloff,
             max_range: stats.range,
         },
-        ProjectileAnimation::blaster(),
+        ProjectileAnimation::blaster(is_charged),
         MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
         TargetsTiles::single(), // Highlight tile at bullet's position
     ));
@@ -604,13 +617,18 @@ pub fn weapon_cooldown_system(time: Res<Time>, mut query: Query<&mut WeaponState
 pub fn projectile_hit_system(
     mut commands: Commands,
     projectile_query: Query<
-        (Entity, &GridPosition, &Projectile),
+        (
+            Entity,
+            &GridPosition,
+            &Projectile,
+            &crate::assets::ProjectileAnimation,
+        ),
         (With<Bullet>, Without<EnemyBullet>, Without<ProjectileHit>),
     >,
     mut enemy_query: Query<(Entity, &GridPosition, &mut Health, &Children), With<Enemy>>,
     mut text_query: Query<&mut Text2d, With<HealthText>>,
 ) {
-    for (bullet_entity, bullet_pos, projectile) in &projectile_query {
+    for (bullet_entity, bullet_pos, projectile, anim) in &projectile_query {
         for (enemy_entity, enemy_pos, mut health, children) in &mut enemy_query {
             if bullet_pos == enemy_pos {
                 // Calculate damage with falloff and crit
@@ -619,11 +637,13 @@ pub fn projectile_hit_system(
                 health.current -= final_damage;
 
                 // Transition projectile to impact state instead of despawning immediately
+                // Preserve the is_charged flag from the original animation
                 commands.entity(bullet_entity).insert((
                     crate::assets::ProjectileAnimation {
                         frame_indices: [0, 1, 2, 3],
                         state: crate::assets::ProjectileAnimationState::Impact,
                         timer: Timer::from_seconds(0.1, TimerMode::Once), // Short duration for impact
+                        is_charged: anim.is_charged,
                     },
                     ProjectileHit, // Mark as hit so it will despawn after finish state
                     ProjectileImmobile, // Stop moving during animation

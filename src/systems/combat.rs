@@ -348,11 +348,23 @@ pub fn projectile_animation_system(
         let frame_index = anim.frame_indices[anim.state as usize];
 
         // Set the sprite to show the correct frame from the 4-frame spritesheet
-        // The blaster spritesheet is 64x16 (4 frames of 16x16 each)
-        sprite.image = projectiles.blaster_image.clone();
+        // Choose between normal and charged sprite based on projectile type
+        let (sprite_image, sprite_layout) = if anim.is_charged {
+            (
+                projectiles.blaster_charged_image.clone(),
+                projectiles.blaster_charged_layout.clone(),
+            )
+        } else {
+            (
+                projectiles.blaster_image.clone(),
+                projectiles.blaster_layout.clone(),
+            )
+        };
+
+        sprite.image = sprite_image;
         sprite.custom_size = Some(BULLET_DRAW_SIZE);
         sprite.texture_atlas = Some(TextureAtlas {
-            layout: projectiles.blaster_layout.clone(),
+            layout: sprite_layout,
             index: frame_index,
         });
     }
