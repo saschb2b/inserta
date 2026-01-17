@@ -58,12 +58,12 @@ fn slime_blueprint() -> EnemyBlueprint {
             base_hp: 100,
             contact_damage: 10,
             move_speed: 1.0,
-            attack_speed: 1.0,
+            attack_speed: 0.5,
         },
         movement: MovementBehavior::Random { idle_chance: 0.33 },
         attack: AttackBehavior::Projectile {
             damage: 10,
-            speed: 8.0, // tiles per second
+            speed: 4.0, // tiles per second
             charge_time: 0.5,
         },
         traits: EnemyTraits::default(),

@@ -338,7 +338,14 @@ fn execute_attack(commands: &mut Commands, behavior: &AttackBehavior, pos: &Grid
 }
 
 /// Spawn an enemy projectile traveling left
-fn spawn_enemy_projectile(commands: &mut Commands, x: i32, y: i32, _speed: f32) {
+fn spawn_enemy_projectile(commands: &mut Commands, x: i32, y: i32, speed: f32) {
+    // Convert speed (tiles per second) to move timer duration
+    let move_timer = if speed > 0.0 {
+        1.0 / speed
+    } else {
+        BULLET_MOVE_TIMER
+    };
+
     commands.spawn((
         Sprite {
             color: Color::srgb(0.9, 0.2, 0.3),
@@ -353,7 +360,7 @@ fn spawn_enemy_projectile(commands: &mut Commands, x: i32, y: i32, _speed: f32) 
         },
         Bullet,
         EnemyBullet,
-        MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
+        MoveTimer(Timer::from_seconds(move_timer, TimerMode::Repeating)),
         TargetsTiles::single(), // Highlight tile at projectile's position
     ));
 }
