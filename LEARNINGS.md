@@ -585,6 +585,113 @@ Details:
 Refs:
 - (No automated test files yet)
 
+---
+
+### DEC-007: Sprite-based projectile animations
+Status: accepted
+
+Summary: Replace mesh projectiles with 4-frame sprite animations using texture atlases.
+
+Context:
+- Original projectiles were simple colored squares (BULLET_DRAW_SIZE meshes).
+- Needed artistic control for attack visuals with proper launch/travel/impact/finish sequence.
+- Player and enemy projectiles both use sprite system for consistency.
+
+Decision:
+- Add ProjectileAnimation component tracking animation state and timers.
+- Create ProjectileSprites resource with blaster and blaster_charged variants.
+- Use 4-frame texture atlases (64x16px spritesheets).
+- Implement state transitions: Launch→Travel→Impact→Finish with timing.
+
+Alternatives:
+- Keep colored meshes: Simpler but no artistic control.
+- Single sprite with UV animation: More complex manual timing.
+- Custom animation curves: Overkill for current needs.
+
+Consequences:
+- Full artistic control over projectile visuals.
+- Charged and normal projectiles can have different sprites.
+- Consistent animation system for all projectile types.
+- Projectiles stop moving on hit (ProjectileImmobile component).
+
+Refs:
+- src/assets.rs:ProjectileSprites, ProjectileAnimation
+- src/weapons/mod.rs:spawn_projectile() changes
+- src/systems/combat.rs:projectile_animation_system()
+- assets/battle/attacks/projectile/blaster_charged.png
+
+---
+
+### DEC-008: Projectile collision hit prevention
+Status: accepted
+
+Summary: Prevent projectiles from repeatedly damaging enemies by using Without<ProjectileHit> filter.
+
+Context:
+- After implementing sprite animations, projectiles stayed at same GridPosition as enemy.
+- projectile_hit_system ran every frame causing continuous damage.
+- Need to exclude projectiles that have already hit to prevent re-hits.
+
+Decision:
+- Add ProjectileHit marker component when projectile first hits enemy.
+- Add ProjectileImmobile component to stop movement during animation.
+- Update projectile_hit_system query: Without<ProjectileHit> filter.
+- Maintain movement systems that skip immobile projectiles.
+
+Alternatives:
+- State flags in Projectile component: Requires checking all collision systems.
+- Cooldown on entity: Could prevent re-firing but more complex.
+- Collision layers: Overkill for simple grid-based combat.
+
+Consequences:
+- Single projectiles deal damage exactly once.
+- Clean animation cycle (impact → finish → despawn).
+- No performance impact (simple component filter).
+- Easier to debug - hit state is explicit marker.
+
+Refs:
+- src/components.rs:ProjectileHit, ProjectileImmobile
+- src/weapons/mod.rs:projectile_hit_system() query filters
+- src/systems/combat.rs:bullet/enemy movement updates
+
+---
+
+### DEC-009: Charged projectile sprite support
+Status: accepted
+
+Summary: Differentiate normal and charged blaster projectiles using separate sprites.
+
+Context:
+- Added blaster_charged.png asset (64x16, 4 frames for charged shots).
+- Need to preserve is_charged flag through projectile lifecycle.
+- Animation system must select correct sprite based on projectile type.
+
+Decision:
+- Extend ProjectileSprites with blaster_charged_image and blaster_charged_layout.
+- Add is_charged field to ProjectileAnimation component.
+- Update ProjectileAnimation::blaster() to accept is_charged parameter.
+- spawn_projectile() chooses sprite/layout based on is_charged flag.
+- Animation system uses is_charged to select correct sprite resource.
+
+Alternatives:
+- UV offset manipulation: Complex to manage, hard to debug.
+- Color tinting: Simpler but loses visual uniqueness.
+- State machines: Overkill for simple frame sequence.
+
+Consequences:
+- Normal and charged shots visually distinct.
+- Consistent 4-frame animation for both types.
+- Easy to extend to other weapon types (add new sprite assets).
+- Maintains existing damage calculation (is_charged flag independent).
+
+Refs:
+- src/assets.rs:ProjectileSprites, ProjectileAnimation extensions
+- src/systems/setup.rs:charged sprite loading
+- src/weapons/mod.rs:is_charged parameter passing
+- assets/battle/attacks/projectile/blaster_charged.png
+
+---
+
 ## References
 
 - [Bevy ECS Book](https://bevy.org/learn/book/ecs/) - Core ECS concepts
