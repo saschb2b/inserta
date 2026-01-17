@@ -65,6 +65,7 @@ fn slime_blueprint() -> EnemyBlueprint {
             damage: 10,
             speed: 4.0, // tiles per second
             charge_time: 0.5,
+            projectile_asset: "projectile/blaster".to_string(),
         },
         traits: EnemyTraits::default(),
         visuals: EnemyVisuals {
@@ -154,6 +155,7 @@ fn canodumb_blueprint() -> EnemyBlueprint {
             damage: 15,
             speed: 10.0,
             charge_time: 0.2,
+            projectile_asset: "projectile/blaster".to_string(),
         },
         traits: EnemyTraits::default(),
         visuals: EnemyVisuals::default(),

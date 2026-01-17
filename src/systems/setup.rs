@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy::text::Justify;
 
-use crate::assets::{FighterSprites, SlimeSprites};
+use crate::assets::{FighterSprites, ProjectileSprites, SlimeSprites};
 use crate::components::{
     ActionBar, ActionChargeBar, ActionCooldownOverlay, ActionKeyText, ActionSlot, ActionSlotUI,
     ActionType, ArenaConfig, BaseColor, CleanupOnStateExit, Enemy, EnemyConfig, FighterAnim,
@@ -196,6 +196,23 @@ pub fn setup_arena(
         idle_frames: 7,
         shoot_frames: 10,
         dead_frames: 7,
+    });
+
+    // ========================================================================
+    // Projectile sprites
+    // ========================================================================
+    let blaster_layout = atlas_layouts.add(TextureAtlasLayout::from_grid(
+        UVec2::new(16, 16), // Each frame is 16x16
+        4,                  // 4 columns (launch, travel, impact, finish)
+        1,                  // 1 row
+        None,
+        None,
+    ));
+
+    let blaster_projectile = asset_server.load("battle/attacks/projectile/blaster.png");
+    commands.insert_resource(ProjectileSprites {
+        blaster_image: blaster_projectile,
+        blaster_layout,
     });
 
     // ========================================================================

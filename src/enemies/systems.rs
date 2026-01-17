@@ -2,6 +2,7 @@
 // Enemy Systems - Execute behaviors based on components
 // ============================================================================
 
+use bevy::image::TextureAtlas;
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -9,6 +10,7 @@ use super::{
     AttackBehavior, AttackState, BehaviorEnemy, ChargingTelegraph, EnemyAnimState, EnemyAttack,
     EnemyMovement, EnemyStats, EnemyTraitContainer, MovementBehavior,
 };
+use crate::assets::{ProjectileAnimation, ProjectileSprites};
 use crate::components::{
     BaseColor, Bullet, EnemyBullet, GridPosition, Health, MoveTimer, RenderConfig, TargetsTiles,
 };
@@ -219,6 +221,7 @@ fn is_valid_enemy_position(x: i32, y: i32) -> bool {
 pub fn execute_attack_behavior(
     mut commands: Commands,
     time: Res<Time>,
+    projectiles: Res<ProjectileSprites>,
     mut enemy_query: Query<
         (Entity, &GridPosition, &mut EnemyAttack, &mut EnemyAnimState),
         With<BehaviorEnemy>,
@@ -265,7 +268,7 @@ pub fn execute_attack_behavior(
 
             AttackState::Attacking => {
                 // Execute the attack based on behavior
-                execute_attack(&mut commands, &attack.behavior, pos);
+                execute_attack(&mut commands, &attack.behavior, pos, &projectiles);
 
                 // Move to recovery/ready
                 attack.state = AttackState::Ready;
@@ -284,14 +287,19 @@ pub fn execute_attack_behavior(
 }
 
 /// Execute a specific attack type
-fn execute_attack(commands: &mut Commands, behavior: &AttackBehavior, pos: &GridPosition) {
+fn execute_attack(
+    commands: &mut Commands,
+    behavior: &AttackBehavior,
+    pos: &GridPosition,
+    projectiles: &ProjectileSprites,
+) {
     match behavior {
         AttackBehavior::None => {}
 
         AttackBehavior::Projectile {
             damage: _, speed, ..
         } => {
-            spawn_enemy_projectile(commands, pos.x, pos.y, *speed);
+            spawn_enemy_projectile(commands, pos.x, pos.y, *speed, projectiles);
         }
 
         AttackBehavior::ProjectileSpread {
@@ -303,7 +311,7 @@ fn execute_attack(commands: &mut Commands, behavior: &AttackBehavior, pos: &Grid
             for offset in row_offsets {
                 let target_y = pos.y + offset;
                 if (0..GRID_HEIGHT).contains(&target_y) {
-                    spawn_enemy_projectile(commands, pos.x, target_y, *speed);
+                    spawn_enemy_projectile(commands, pos.x, target_y, *speed, projectiles);
                 }
             }
         }
@@ -312,7 +320,7 @@ fn execute_attack(commands: &mut Commands, behavior: &AttackBehavior, pos: &Grid
             damage: _, speed, ..
         } => {
             // Shockwave is similar to projectile but could have different visuals
-            spawn_enemy_projectile(commands, pos.x, pos.y, *speed);
+            spawn_enemy_projectile(commands, pos.x, pos.y, *speed, projectiles);
         }
 
         AttackBehavior::Melee { .. } => {
@@ -338,7 +346,13 @@ fn execute_attack(commands: &mut Commands, behavior: &AttackBehavior, pos: &Grid
 }
 
 /// Spawn an enemy projectile traveling left
-fn spawn_enemy_projectile(commands: &mut Commands, x: i32, y: i32, speed: f32) {
+fn spawn_enemy_projectile(
+    commands: &mut Commands,
+    x: i32,
+    y: i32,
+    speed: f32,
+    projectiles: &ProjectileSprites,
+) {
     // Convert speed (tiles per second) to move timer duration
     let move_timer = if speed > 0.0 {
         1.0 / speed
@@ -348,8 +362,12 @@ fn spawn_enemy_projectile(commands: &mut Commands, x: i32, y: i32, speed: f32) {
 
     commands.spawn((
         Sprite {
-            color: Color::srgb(0.9, 0.2, 0.3),
-            custom_size: Some(BULLET_DRAW_SIZE),
+            image: projectiles.blaster_image.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: projectiles.blaster_layout.clone(),
+                index: 1, // Start at travel frame
+            }),
+            custom_size: Some(Vec2::new(16.0, 16.0)),
             ..default()
         },
         Transform::default(),
@@ -360,6 +378,7 @@ fn spawn_enemy_projectile(commands: &mut Commands, x: i32, y: i32, speed: f32) {
         },
         Bullet,
         EnemyBullet,
+        ProjectileAnimation::blaster(),
         MoveTimer(Timer::from_seconds(move_timer, TimerMode::Repeating)),
         TargetsTiles::single(), // Highlight tile at projectile's position
     ));

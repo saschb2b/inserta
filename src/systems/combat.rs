@@ -8,7 +8,9 @@ use crate::resources::{GameProgress, PlayerCurrency, WaveState};
 
 /// Speed of highlight fade in/out (intensity units per second)
 const HIGHLIGHT_FADE_SPEED: f32 = 8.0;
+use crate::assets::{ProjectileAnimation, ProjectileSprites};
 use crate::weapons::Projectile;
+use bevy::image::TextureAtlas;
 use bevy::prelude::*;
 
 /// Player bullets move right
@@ -288,5 +290,33 @@ pub fn check_victory_condition(
 
         // Go to shop
         next_state.set(GameState::Shop);
+    }
+}
+
+// ============================================================================
+// Projectile Animation System
+// ============================================================================
+
+/// Animate projectiles based on their state (launch, travel, impact, finish)
+pub fn projectile_animation_system(
+    mut query: Query<(&mut Sprite, &mut ProjectileAnimation), With<Bullet>>,
+    projectiles: Option<Res<ProjectileSprites>>,
+) {
+    let Some(projectiles) = projectiles else {
+        return;
+    };
+
+    for (mut sprite, anim) in &mut query {
+        // Get the current frame index based on animation state
+        let frame_index = anim.frame_indices[anim.state as usize];
+
+        // Set the sprite to show the correct frame from the 4-frame spritesheet
+        // The blaster spritesheet is 64x16 (4 frames of 16x16 each)
+        sprite.image = projectiles.blaster_image.clone();
+        sprite.custom_size = Some(Vec2::new(16.0, 16.0));
+        sprite.texture_atlas = Some(TextureAtlas {
+            layout: projectiles.blaster_layout.clone(),
+            index: frame_index,
+        });
     }
 }

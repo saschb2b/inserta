@@ -10,7 +10,9 @@
 
 pub mod blaster;
 
+use crate::assets::{ProjectileAnimation, ProjectileSprites};
 use crate::resources::PlayerUpgrades;
+use bevy::image::TextureAtlas;
 use bevy::prelude::*;
 
 // ============================================================================
@@ -429,6 +431,7 @@ pub fn weapon_input_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     gamepads: Query<&Gamepad>,
     time: Res<Time>,
+    projectiles: Res<ProjectileSprites>,
     mut query: Query<(&GridPosition, &EquippedWeapon, &mut WeaponState), With<Player>>,
 ) {
     for (player_pos, weapon, mut state) in &mut query {
@@ -478,7 +481,7 @@ pub fn weapon_input_system(
         // Handle fire button press - immediate shot for blaster
         if fire_pressed && state.is_ready() {
             // Fire normal shot immediately
-            spawn_projectile(&mut commands, player_pos, weapon, false);
+            spawn_projectile(&mut commands, player_pos, weapon, false, &projectiles);
 
             // Start charging if weapon supports it
             if weapon.stats.charge_time > 0.0 {
@@ -492,7 +495,7 @@ pub fn weapon_input_system(
         if fire_released && state.firing_state == WeaponFiringState::Charging {
             if state.charge_ready {
                 // Fire charged shot
-                spawn_projectile(&mut commands, player_pos, weapon, true);
+                spawn_projectile(&mut commands, player_pos, weapon, true, &projectiles);
             }
             // Start cooldown regardless
             state.start_cooldown(weapon.stats.fire_cooldown);
@@ -512,33 +515,31 @@ fn spawn_projectile(
     player_pos: &GridPosition,
     weapon: &EquippedWeapon,
     is_charged: bool,
+    projectiles: &ProjectileSprites,
 ) {
     let stats = &weapon.stats;
 
-    let (damage, size, color) = if is_charged {
+    let damage = if is_charged {
         let charged = stats.charged_damage.as_ref().unwrap_or(&stats.damage);
-        (
-            charged.amount,
-            stats.charged_projectile_size,
-            stats.charged_projectile_color,
-        )
+        charged.amount
     } else {
-        (
-            stats.damage.amount,
-            stats.projectile_size,
-            stats.projectile_color,
-        )
+        stats.damage.amount
     };
 
     // Roll for crit
     let crit_result = stats.critical.roll();
     let crit_multiplier = stats.critical.get_multiplier(crit_result);
 
-    // Spawn projectile entity
+    // Spawn projectile entity with sprite animation
+    // The blaster projectile is 64x16 with 4 frames: launch, travel, impact, finish
     commands.spawn((
         Sprite {
-            color,
-            custom_size: Some(size),
+            image: projectiles.blaster_image.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: projectiles.blaster_layout.clone(),
+                index: 1, // Start at travel frame
+            }),
+            custom_size: Some(Vec2::new(16.0, 16.0)),
             ..default()
         },
         Transform::default(),
@@ -561,6 +562,7 @@ fn spawn_projectile(
             falloff: stats.falloff,
             max_range: stats.range,
         },
+        ProjectileAnimation::blaster(),
         MoveTimer(Timer::from_seconds(BULLET_MOVE_TIMER, TimerMode::Repeating)),
         TargetsTiles::single(), // Highlight tile at bullet's position
     ));

@@ -101,6 +101,8 @@ pub enum AttackBehavior {
         speed: f32,
         /// Charge time before firing (for telegraph)
         charge_time: f32,
+        /// Asset path for projectile sprite (e.g., "projectile/blaster")
+        projectile_asset: String,
     },
 
     /// Fires multiple projectiles in a spread
@@ -164,12 +166,17 @@ pub enum AttackBehavior {
     },
 }
 
+fn default_projectile_asset() -> String {
+    "projectile/blaster".to_string()
+}
+
 impl Default for AttackBehavior {
     fn default() -> Self {
         AttackBehavior::Projectile {
             damage: 10,
             speed: 8.0,
             charge_time: 0.5,
+            projectile_asset: default_projectile_asset(),
         }
     }
 }

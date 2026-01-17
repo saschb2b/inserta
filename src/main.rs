@@ -27,8 +27,8 @@ use systems::{
     animation::{animate_player, animate_slime},
     combat::{
         bullet_hit_enemy, bullet_movement, check_victory_condition, enemy_bullet_hit_player,
-        enemy_bullet_movement, entity_flash, muzzle_lifetime, tile_attack_highlight,
-        update_wave_state,
+        enemy_bullet_movement, entity_flash, muzzle_lifetime, projectile_animation_system,
+        tile_attack_highlight, update_wave_state,
     },
     common::update_transforms,
     // enemy_ai::{enemy_movement, enemy_shoot},  // Replaced by enemies::EnemyPlugin
@@ -139,6 +139,8 @@ fn main() {
         .add_systems(
             Update,
             (
+                // Projectile animations (before movement so sprites are updated)
+                projectile_animation_system,
                 // Combat
                 bullet_movement,
                 enemy_bullet_movement,
