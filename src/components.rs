@@ -18,6 +18,64 @@ pub enum GameState {
 pub struct CleanupOnStateExit(pub GameState);
 
 // ============================================================================
+// Pre-Battle Intro
+// ============================================================================
+
+/// Resource tracking the pre-battle intro sequence
+#[derive(Resource, Debug)]
+pub struct PreBattleIntro {
+    /// Total elapsed time since intro started
+    pub elapsed: f32,
+    /// Current phase of the intro
+    pub phase: IntroPhase,
+    /// Whether input is unlocked
+    pub input_unlocked: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntroPhase {
+    FadeIn,     // 0.0 - 0.15s: Fade from black
+    DropIn,     // 0.15 - 0.5s: Player/enemy appear
+    Countdown3, // 0.5 - 0.7s: "3"
+    Countdown2, // 0.7 - 0.9s: "2"
+    Countdown1, // 0.9 - 1.1s: "1"
+    Engage,     // 1.1 - 1.3s: "ENGAGE!"
+    Complete,   // 1.3s+: Battle active
+}
+
+impl Default for PreBattleIntro {
+    fn default() -> Self {
+        Self {
+            elapsed: 0.0,
+            phase: IntroPhase::FadeIn,
+            input_unlocked: false,
+        }
+    }
+}
+
+impl PreBattleIntro {
+    pub fn is_complete(&self) -> bool {
+        self.phase == IntroPhase::Complete
+    }
+}
+
+/// Marker for the countdown text entity
+#[derive(Component)]
+pub struct CountdownText;
+
+/// Marker for the fade overlay entity
+#[derive(Component)]
+pub struct FadeOverlay;
+
+/// Component for player drop-in animation
+#[derive(Component)]
+pub struct DropInAnimation {
+    pub timer: Timer,
+    pub start_scale: f32,
+    pub end_scale: f32,
+}
+
+// ============================================================================
 // Arena Configuration
 // ============================================================================
 

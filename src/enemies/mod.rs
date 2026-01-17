@@ -46,7 +46,8 @@ impl Plugin for EnemyPlugin {
             Update,
             (execute_movement_behavior, execute_attack_behavior)
                 .chain()
-                .run_if(in_state(crate::components::GameState::Playing)),
+                .run_if(in_state(crate::components::GameState::Playing))
+                .run_if(crate::systems::intro::intro_complete),
         );
     }
 }

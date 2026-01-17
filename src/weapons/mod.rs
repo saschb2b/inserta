@@ -410,7 +410,8 @@ impl Plugin for WeaponPlugin {
                 weapon_cooldown_system,
                 projectile_hit_system,
             )
-                .run_if(in_state(crate::components::GameState::Playing)),
+                .run_if(in_state(crate::components::GameState::Playing))
+                .run_if(crate::systems::intro::intro_complete),
         );
     }
 }

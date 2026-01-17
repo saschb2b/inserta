@@ -33,6 +33,7 @@ use systems::{
     common::update_transforms,
     // enemy_ai::{enemy_movement, enemy_shoot},  // Replaced by enemies::EnemyPlugin
     growth::{GrowthTreeState, cleanup_growth, setup_growth_tree, update_growth_tree},
+    intro::{cleanup_intro, intro_complete, setup_intro, update_intro},
     menu::{cleanup_menu, handle_menu_selection, setup_menu, update_menu_visuals},
     player::move_player,
     setup::{
@@ -112,8 +113,16 @@ fn main() {
         // ====================================================================
         .add_systems(
             OnEnter(GameState::Playing),
-            (setup_arena, setup_action_bar, spawn_player_actions),
+            (
+                setup_arena,
+                setup_action_bar,
+                spawn_player_actions,
+                setup_intro,
+            ),
         )
+        // Pre-battle intro system (runs until countdown complete)
+        .add_systems(Update, update_intro.run_if(in_state(GameState::Playing)))
+        // Player input systems (only run after intro complete)
         .add_systems(
             Update,
             (
@@ -123,7 +132,8 @@ fn main() {
                 // Animation
                 animate_player,
             )
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(GameState::Playing))
+                .run_if(intro_complete),
         )
         // Enemy animation and effects - chained to avoid Sprite conflicts
         .add_systems(
@@ -175,7 +185,7 @@ fn main() {
             )
                 .run_if(in_state(GameState::Playing)),
         )
-        .add_systems(OnExit(GameState::Playing), cleanup_arena)
+        .add_systems(OnExit(GameState::Playing), (cleanup_arena, cleanup_intro))
         .run();
 }
 
