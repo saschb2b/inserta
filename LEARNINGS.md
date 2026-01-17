@@ -775,6 +775,129 @@ Refs:
 
 ---
 
+### PAT-008: Victory Outro Sequence
+Summary: Post-battle victory screen with stats display and confirm-to-continue.
+
+Pattern:
+1. Victory condition inserts `VictoryOutro` resource (triggers outro mode).
+2. `outro_active` run condition gates outro systems; `outro_not_active` gates gameplay.
+3. Setup system spawns UI only once (checks if UI already exists).
+4. Update system animates phases: HitStop -> Clear -> Stats -> WaitConfirm.
+5. Confirm input sets `outro.confirmed = true`.
+6. Transition system checks `is_done()` and changes state.
+
+Timing:
+- 0.0-0.1s: HitStop (brief pause)
+- 0.1-0.5s: "CLEAR!" banner fades in with scale bounce
+- 0.5-1.5s: Stats panel slides in, numbers count up
+- 1.5s+: Wait for SPACE/Enter/Gamepad-South to continue
+
+Key Components:
+- `VictoryOutro` resource with elapsed time, phase, battle_time, reward
+- `OutroPhase` enum for sequencing
+- `BattleTimer` resource tracks elapsed battle time
+- Victory sound plays at outro start
+
+Query Conflicts:
+- All text queries need `Without<OtherTextMarkers>` to avoid conflicts
+- Stats panel children are separate entities with own markers
+
+Refs:
+- src/components.rs:VictoryOutro, OutroPhase
+- src/systems/outro.rs
+- src/resources.rs:BattleTimer
+
+---
+
+### PAT-009: Defeat Outro Sequence (parallel to Victory)
+Summary: Defeat outro mirrors victory structure but with different visuals, no reward, and no progress.
+
+Pattern:
+1. `check_defeat_condition` checks if player HP <= 0 or player entity missing.
+2. Inserts `DefeatOutro` resource (triggers outro mode).
+3. Both `outro_active` and `outro_not_active` check for EITHER victory OR defeat resources.
+4. Defeat systems run in parallel with victory systems (only one resource exists at a time).
+5. Defeat does NOT call `campaign_progress.complete_battle()` - no progression.
+6. Returns to Campaign screen without marking battle complete.
+
+Timing (slightly longer hitstop for dramatic effect):
+- 0.0-0.3s: HitStop (longer freeze on death)
+- 0.3-0.8s: "GAME OVER" text with shake effect
+- 0.8-1.5s: Stats panel slides in (time shown, "NO REWARD" message)
+- 1.5s+: Wait for confirm input
+
+Key Differences from Victory:
+- Red "GAME OVER" text instead of gold "CLEAR!"
+- Shake effect instead of bounce
+- Shows "NO REWARD" instead of counting up reward
+- `game-over.mp3` sound instead of `victory.mp3`
+- No battle progress saved
+
+Refs:
+- src/components.rs:DefeatOutro, DefeatPhase
+- src/systems/outro.rs:setup_defeat_outro, update_defeat_outro, check_defeat_outro_complete
+- src/systems/combat.rs:check_defeat_condition
+
+---
+
+### GCH-004: Dead code from deprecated systems lingers in main.rs
+Status: resolved
+
+Summary: When removing deprecated systems (e.g., enemy_ai.rs), references in main.rs
+system scheduling may remain, causing compilation errors.
+
+Details:
+- Deleted `src/systems/enemy_ai.rs` (replaced by `enemies::EnemyPlugin`).
+- Removed `pub mod enemy_ai` and `use enemy_ai::*` from `systems/mod.rs`.
+- But `bullet_hit_enemy` reference in main.rs line 190 remained.
+- Compilation failed with "cannot find value `bullet_hit_enemy` in this scope".
+
+Resolution:
+- Always search main.rs for function names after deleting system files.
+- Run `cargo check` immediately after deletions to catch dangling references.
+- Also check for unused imports in files that called the deleted code.
+
+Refs:
+- src/main.rs:190 (removed reference)
+- src/systems/combat.rs:2-12 (cleaned unused imports)
+
+---
+
+### GCH-005: Enemy movement must check for tile collisions
+Status: resolved
+
+Summary: Enemies moving independently can overlap on the same tile if collision
+checking isn't implemented in the movement system.
+
+Details:
+- Multiple enemies using `MovementBehavior::Random` could all pick the same
+  destination tile in the same frame.
+- Must collect occupied positions BEFORE processing movement.
+- Must update occupied set dynamically as each enemy moves to prevent two
+  enemies from claiming the same empty tile.
+
+Solution:
+- Use `HashSet<(i32, i32)>` for O(1) collision lookups.
+- Before moving, check `!occupied_positions.contains(&(new_x, new_y))`.
+- After moving, remove old position and insert new position in the set.
+
+```rust
+let mut occupied: HashSet<(i32, i32)> = query.iter().map(|(_, pos, ..)| (pos.x, pos.y)).collect();
+
+// In movement loop:
+if is_valid_enemy_position(new_x, new_y) && !occupied.contains(&(new_x, new_y)) {
+    occupied.remove(&(pos.x, pos.y));
+    occupied.insert((new_x, new_y));
+    pos.x = new_x;
+    pos.y = new_y;
+}
+```
+
+Refs:
+- src/enemies/systems.rs:execute_movement_behavior()
+
+---
+
 ## References
 
 - [Bevy ECS Book](https://bevy.org/learn/book/ecs/) - Core ECS concepts

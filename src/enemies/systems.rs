@@ -27,14 +27,24 @@ pub fn execute_movement_behavior(
     // For behaviors that need player position (ChasePlayer, MirrorPlayer),
     // we'd need to either chain systems or use a resource to share player position
     mut enemy_query: Query<
-        (&mut GridPosition, &mut EnemyMovement, &EnemyStats),
+        (Entity, &mut GridPosition, &mut EnemyMovement, &EnemyStats),
         With<BehaviorEnemy>,
     >,
 ) {
+    use std::collections::HashSet;
+
     let player_pos: Option<&GridPosition> = None; // TODO: Get from resource
     let mut rng = rand::rng();
 
-    for (mut pos, mut movement, stats) in &mut enemy_query {
+    // Collect all current enemy positions - use HashSet for O(1) lookups
+    // Track positions dynamically as enemies move to prevent two enemies
+    // from moving to the same empty tile in the same frame
+    let mut occupied_positions: HashSet<(i32, i32)> = enemy_query
+        .iter()
+        .map(|(_, pos, _, _)| (pos.x, pos.y))
+        .collect();
+
+    for (_, mut pos, mut movement, stats) in &mut enemy_query {
         movement.move_timer.tick(time.delta());
 
         if !movement.move_timer.just_finished() {
@@ -52,11 +62,21 @@ pub fn execute_movement_behavior(
             &mut rng,
         );
 
+        // Skip if no movement requested
+        if dx == 0 && dy == 0 {
+            continue;
+        }
+
         // Apply movement within enemy territory
         let new_x = pos.x + dx;
         let new_y = pos.y + dy;
 
-        if is_valid_enemy_position(new_x, new_y) {
+        // Check if position is valid AND not occupied by another enemy
+        if is_valid_enemy_position(new_x, new_y) && !occupied_positions.contains(&(new_x, new_y)) {
+            // Update occupied set: remove old position, add new position
+            occupied_positions.remove(&(pos.x, pos.y));
+            occupied_positions.insert((new_x, new_y));
+
             pos.x = new_x;
             pos.y = new_y;
         }
@@ -296,14 +316,12 @@ fn execute_attack(
     match behavior {
         AttackBehavior::None => {}
 
-        AttackBehavior::Projectile {
-            damage: _, speed, ..
-        } => {
-            spawn_enemy_projectile(commands, pos.x, pos.y, *speed, projectiles);
+        AttackBehavior::Projectile { damage, speed, .. } => {
+            spawn_enemy_projectile(commands, pos.x, pos.y, *speed, *damage, projectiles);
         }
 
         AttackBehavior::ProjectileSpread {
-            damage: _,
+            damage,
             speed,
             row_offsets,
             ..
@@ -311,16 +329,14 @@ fn execute_attack(
             for offset in row_offsets {
                 let target_y = pos.y + offset;
                 if (0..GRID_HEIGHT).contains(&target_y) {
-                    spawn_enemy_projectile(commands, pos.x, target_y, *speed, projectiles);
+                    spawn_enemy_projectile(commands, pos.x, target_y, *speed, *damage, projectiles);
                 }
             }
         }
 
-        AttackBehavior::ShockWave {
-            damage: _, speed, ..
-        } => {
+        AttackBehavior::ShockWave { damage, speed, .. } => {
             // Shockwave is similar to projectile but could have different visuals
-            spawn_enemy_projectile(commands, pos.x, pos.y, *speed, projectiles);
+            spawn_enemy_projectile(commands, pos.x, pos.y, *speed, *damage, projectiles);
         }
 
         AttackBehavior::Melee { .. } => {
@@ -351,6 +367,7 @@ fn spawn_enemy_projectile(
     x: i32,
     y: i32,
     speed: f32,
+    damage: i32,
     projectiles: &ProjectileSprites,
 ) {
     // Convert speed (tiles per second) to move timer duration
@@ -377,7 +394,7 @@ fn spawn_enemy_projectile(
             base_z: Z_BULLET,
         },
         Bullet,
-        EnemyBullet,
+        EnemyBullet::new(damage),
         ProjectileAnimation::blaster(false), // Enemy projectiles are not charged
         MoveTimer(Timer::from_seconds(move_timer, TimerMode::Repeating)),
         TargetsTiles::single(), // Highlight tile at projectile's position

@@ -18,7 +18,8 @@ use components::{GameState, InputCooldown};
 use constants::MOVE_COOLDOWN;
 use enemies::EnemyPlugin;
 use resources::{
-    CampaignProgress, GameProgress, PlayerCurrency, PlayerUpgrades, SelectedBattle, WaveState,
+    BattleTimer, CampaignProgress, GameProgress, PlayerCurrency, PlayerUpgrades, SelectedBattle,
+    WaveState,
 };
 use systems::{
     action_ui::update_action_bar_ui,
@@ -29,15 +30,19 @@ use systems::{
     animation::{animate_player, animate_slime},
     campaign::{cleanup_campaign, setup_campaign, update_campaign},
     combat::{
-        bullet_hit_enemy, bullet_movement, check_victory_condition, enemy_bullet_hit_player,
+        bullet_movement, check_defeat_condition, check_victory_condition, enemy_bullet_hit_player,
         enemy_bullet_movement, entity_flash, muzzle_lifetime, projectile_animation_system,
         tile_attack_highlight, update_wave_state,
     },
     common::update_transforms,
-    // enemy_ai::{enemy_movement, enemy_shoot},  // Replaced by enemies::EnemyPlugin
     growth::{GrowthTreeState, cleanup_growth, setup_growth_tree, update_growth_tree},
     intro::{cleanup_intro, intro_complete, setup_intro, update_intro},
     menu::{cleanup_menu, handle_menu_selection, setup_menu, update_menu_visuals},
+    outro::{
+        check_defeat_outro_complete, check_outro_complete, cleanup_outro, defeat_outro_active,
+        outro_not_active, setup_defeat_outro, setup_outro, update_defeat_outro, update_outro,
+        victory_outro_active,
+    },
     player::move_player,
     setup::{
         cleanup_arena, cleanup_campaign_entities, cleanup_menu_entities, cleanup_splash_entities,
@@ -70,6 +75,7 @@ fn main() {
         .init_resource::<GameProgress>()
         .init_resource::<PlayerUpgrades>()
         .init_resource::<WaveState>()
+        .init_resource::<BattleTimer>()
         .init_resource::<GrowthTreeState>()
         .init_resource::<CampaignProgress>()
         .init_resource::<SelectedBattle>()
@@ -135,11 +141,20 @@ fn main() {
                 setup_action_bar,
                 spawn_player_actions,
                 setup_intro,
+                reset_battle_timer,
             ),
         )
         // Pre-battle intro system (runs until countdown complete)
         .add_systems(Update, update_intro.run_if(in_state(GameState::Playing)))
-        // Player input systems (only run after intro complete)
+        // Battle timer (only runs during active gameplay, not during outro)
+        .add_systems(
+            Update,
+            tick_battle_timer
+                .run_if(in_state(GameState::Playing))
+                .run_if(intro_complete)
+                .run_if(outro_not_active),
+        )
+        // Player input systems (only run after intro complete and not during outro)
         .add_systems(
             Update,
             (
@@ -150,7 +165,8 @@ fn main() {
                 animate_player,
             )
                 .run_if(in_state(GameState::Playing))
-                .run_if(intro_complete),
+                .run_if(intro_complete)
+                .run_if(outro_not_active),
         )
         // Enemy animation and effects - chained to avoid Sprite conflicts
         .add_systems(
@@ -161,7 +177,8 @@ fn main() {
                 entity_flash,
             )
                 .chain()
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(GameState::Playing))
+                .run_if(outro_not_active),
         )
         .add_systems(
             Update,
@@ -171,13 +188,13 @@ fn main() {
                 // Combat
                 bullet_movement,
                 enemy_bullet_movement,
-                bullet_hit_enemy,
                 charged_shot_hit_enemy,
                 enemy_bullet_hit_player,
                 tile_attack_highlight,
                 // Game Loop
                 update_wave_state,
                 check_victory_condition,
+                check_defeat_condition,
                 // Shield systems (run before damage)
                 update_shield,
                 shield_blocks_damage,
@@ -185,7 +202,8 @@ fn main() {
                 widesword_hit_enemy,
                 despawn_widesword_slash,
             )
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(GameState::Playing))
+                .run_if(outro_not_active),
         )
         .add_systems(
             Update,
@@ -197,12 +215,35 @@ fn main() {
                 update_action_bar_ui,
                 // Transform updates (should run last)
                 update_transforms,
-                // Back to menu on Escape
-                return_to_menu,
+                // Back to menu on Escape (only when not in outro)
+                return_to_menu.run_if(outro_not_active),
             )
                 .run_if(in_state(GameState::Playing)),
         )
-        .add_systems(OnExit(GameState::Playing), (cleanup_arena, cleanup_intro))
+        // Victory outro systems
+        .add_systems(
+            Update,
+            (setup_outro, update_outro, check_outro_complete)
+                .chain()
+                .run_if(in_state(GameState::Playing))
+                .run_if(victory_outro_active),
+        )
+        // Defeat outro systems
+        .add_systems(
+            Update,
+            (
+                setup_defeat_outro,
+                update_defeat_outro,
+                check_defeat_outro_complete,
+            )
+                .chain()
+                .run_if(in_state(GameState::Playing))
+                .run_if(defeat_outro_active),
+        )
+        .add_systems(
+            OnExit(GameState::Playing),
+            (cleanup_arena, cleanup_intro, cleanup_outro),
+        )
         .run();
 }
 
@@ -214,4 +255,14 @@ fn return_to_menu(
     if keyboard.just_pressed(KeyCode::Escape) {
         next_state.set(GameState::MainMenu);
     }
+}
+
+/// Reset battle timer when entering Playing state
+fn reset_battle_timer(mut timer: ResMut<BattleTimer>) {
+    timer.reset();
+}
+
+/// Tick battle timer during active gameplay
+fn tick_battle_timer(time: Res<Time>, mut timer: ResMut<BattleTimer>) {
+    timer.tick(time.delta_secs());
 }

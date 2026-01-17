@@ -1,15 +1,14 @@
 use crate::components::{
-    BaseColor, Bullet, ChargedShot, Enemy, EnemyBullet, FlashTimer, GameState, GridPosition,
-    Health, HealthText, Lifetime, MoveTimer, MuzzleFlash, Player, PlayerHealthText, TargetsTiles,
-    TileAssets, TileHighlightState, TilePanel,
+    BaseColor, Bullet, DefeatOutro, Enemy, EnemyBullet, FlashTimer, GridPosition, Health, Lifetime,
+    MoveTimer, MuzzleFlash, Player, PlayerHealthText, TargetsTiles, TileAssets, TileHighlightState,
+    TilePanel, VictoryOutro,
 };
 use crate::constants::*;
-use crate::resources::{CampaignProgress, GameProgress, PlayerCurrency, SelectedBattle, WaveState};
+use crate::resources::{BattleTimer, GameProgress, PlayerCurrency, WaveState};
 
 /// Speed of highlight fade in/out (intensity units per second)
 const HIGHLIGHT_FADE_SPEED: f32 = 8.0;
 use crate::assets::{ProjectileAnimation, ProjectileSprites};
-use crate::weapons::Projectile;
 use bevy::image::TextureAtlas;
 use bevy::prelude::*;
 
@@ -75,60 +74,18 @@ pub fn muzzle_lifetime(
     }
 }
 
-/// Legacy bullet hit system - only for non-weapon bullets (e.g., old system bullets without Projectile)
-/// Player projectiles with the Projectile component are handled by weapon::projectile_hit_system
-pub fn bullet_hit_enemy(
-    mut commands: Commands,
-    bullet_query: Query<
-        (Entity, &GridPosition),
-        (
-            With<Bullet>,
-            Without<EnemyBullet>,
-            Without<ChargedShot>,
-            Without<Projectile>,
-        ),
-    >,
-    mut enemy_query: Query<(Entity, &GridPosition, &mut Health, &Children), With<Enemy>>,
-    mut text_query: Query<&mut Text2d, With<HealthText>>,
-) {
-    for (bullet_entity, bullet_pos) in &bullet_query {
-        for (enemy_entity, enemy_pos, mut health, children) in &mut enemy_query {
-            if bullet_pos == enemy_pos {
-                health.current -= PLAYER_DAMAGE;
-                commands.entity(bullet_entity).despawn();
-
-                // Update HP text children (shadow + main)
-                for child in children.iter() {
-                    if let Ok(mut text) = text_query.get_mut(child) {
-                        text.0 = health.current.max(0).to_string();
-                    }
-                }
-
-                if health.current <= 0 {
-                    // Despawn enemy and all children (despawn is recursive in Bevy 0.17+)
-                    commands.entity(enemy_entity).despawn();
-                } else {
-                    // Flash feedback only if still alive
-                    commands
-                        .entity(enemy_entity)
-                        .insert(FlashTimer(Timer::from_seconds(FLASH_TIME, TimerMode::Once)));
-                }
-            }
-        }
-    }
-}
-
 /// Enemy bullets hit player
 pub fn enemy_bullet_hit_player(
     mut commands: Commands,
-    bullet_query: Query<(Entity, &GridPosition), With<EnemyBullet>>,
+    bullet_query: Query<(Entity, &GridPosition, &EnemyBullet)>,
     mut player_query: Query<(Entity, &GridPosition, &mut Health), With<Player>>,
     mut hp_text_query: Query<&mut Text2d, With<PlayerHealthText>>,
 ) {
-    for (bullet_entity, bullet_pos) in &bullet_query {
+    for (bullet_entity, bullet_pos, enemy_bullet) in &bullet_query {
         for (player_entity, player_pos, mut health) in &mut player_query {
             if bullet_pos == player_pos {
-                health.current -= ENEMY_DAMAGE;
+                // Use damage from the bullet (defined in enemy blueprint)
+                health.current -= enemy_bullet.damage;
                 commands.entity(bullet_entity).despawn();
 
                 // Update player HP text
@@ -282,13 +239,12 @@ pub fn update_wave_state(
 
 /// Check if all enemies are defeated to win the wave
 pub fn check_victory_condition(
+    mut commands: Commands,
     mut wave_state: ResMut<WaveState>,
     enemy_query: Query<Entity, With<Enemy>>,
-    mut next_state: ResMut<NextState<GameState>>,
     mut currency: ResMut<PlayerCurrency>,
     mut progress: ResMut<GameProgress>,
-    mut campaign_progress: ResMut<CampaignProgress>,
-    selected_battle: Option<Res<SelectedBattle>>,
+    battle_timer: Res<BattleTimer>,
 ) {
     if *wave_state == WaveState::Active && enemy_query.is_empty() {
         // Victory!
@@ -302,19 +258,9 @@ pub fn check_victory_condition(
         // Advance level
         progress.next_level();
 
-        // If we came from a campaign battle, mark it complete and go back to campaign
-        if let Some(selected) = selected_battle {
-            campaign_progress.complete_battle(selected.arc, selected.battle);
-            info!(
-                "Battle {} of Arc {} completed!",
-                selected.battle + 1,
-                selected.arc + 1
-            );
-            next_state.set(GameState::Campaign);
-        } else {
-            // Fallback: Go to shop (for test battles or other modes)
-            next_state.set(GameState::Shop);
-        }
+        // Trigger the victory outro instead of immediate state transition
+        // The outro system will detect this resource and set up the UI
+        commands.insert_resource(VictoryOutro::new(battle_timer.elapsed, reward));
     }
 }
 
@@ -380,5 +326,35 @@ pub fn projectile_animation_system(
             layout: sprite_layout,
             index: frame_index,
         });
+    }
+}
+
+/// Check if player is defeated to trigger game over
+pub fn check_defeat_condition(
+    mut commands: Commands,
+    mut wave_state: ResMut<WaveState>,
+    player_query: Query<&Health, With<Player>>,
+    battle_timer: Res<BattleTimer>,
+) {
+    // Only check during active battle
+    if *wave_state != WaveState::Active {
+        return;
+    }
+
+    // Check if player is dead (entity still exists but HP <= 0) or player entity is gone
+    let player_dead = player_query
+        .iter()
+        .next()
+        .map(|h| h.current <= 0)
+        .unwrap_or(true); // No player entity = dead
+
+    if player_dead {
+        // Defeat!
+        *wave_state = WaveState::Cleared; // Reuse Cleared state to stop gameplay
+
+        info!("Player Defeated! No reward earned.");
+
+        // Trigger the defeat outro
+        commands.insert_resource(DefeatOutro::new(battle_timer.elapsed));
     }
 }

@@ -153,17 +153,9 @@ pub const COLOR_HP_PLATE: Color = Color::srgba(0.0, 0.0, 0.0, 0.5);
 pub const SHOOT_COOLDOWN: f32 = 0.35; // Player shoot cooldown
 pub const MOVE_COOLDOWN: f32 = 0.15;
 
-// Enemy AI timing
-pub const ENEMY_MOVE_COOLDOWN: f32 = 1.2; // Time between enemy moves
-pub const ENEMY_SHOOT_COOLDOWN: f32 = 2.0; // Time between enemy shots
-pub const ENEMY_CHARGE_TIME: f32 = 0.5; // Startup telegraph before shooting
-
-pub const FLASH_TIME: f32 = 0.08;
-pub const MUZZLE_TIME: f32 = 0.06;
-
-// Damage
-pub const PLAYER_DAMAGE: i32 = 1; // Damage player deals
-pub const ENEMY_DAMAGE: i32 = 10; // Damage enemy deals
+// Visual feedback timing (used by both player and enemies)
+pub const FLASH_TIME: f32 = 0.08; // Hit flash duration
+pub const MUZZLE_TIME: f32 = 0.06; // Muzzle flash duration
 
 // ============================================================================
 // Action System

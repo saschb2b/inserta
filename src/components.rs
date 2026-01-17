@@ -77,6 +77,129 @@ pub struct DropInAnimation {
 }
 
 // ============================================================================
+// Post-Battle Victory Outro
+// ============================================================================
+
+/// Resource tracking the victory outro sequence
+#[derive(Resource, Debug)]
+pub struct VictoryOutro {
+    /// Total elapsed time since outro started
+    pub elapsed: f32,
+    /// Current phase of the outro
+    pub phase: OutroPhase,
+    /// Battle time in seconds
+    pub battle_time: f32,
+    /// Reward earned
+    pub reward: u64,
+    /// Whether player has pressed confirm to continue
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutroPhase {
+    HitStop,     // 0.0 - 0.1s: Brief freeze on killing blow
+    Clear,       // 0.1 - 0.5s: "CLEAR!" banner appears
+    Stats,       // 0.5 - 1.5s: Stats panel slides in, numbers count up
+    WaitConfirm, // 1.5s+: Wait for player to press confirm
+}
+
+impl VictoryOutro {
+    pub fn new(battle_time: f32, reward: u64) -> Self {
+        Self {
+            elapsed: 0.0,
+            phase: OutroPhase::HitStop,
+            battle_time,
+            reward,
+            confirmed: false,
+        }
+    }
+
+    pub fn is_done(&self) -> bool {
+        self.confirmed
+    }
+}
+
+/// Marker for the victory "CLEAR!" text
+#[derive(Component)]
+pub struct VictoryClearText;
+
+/// Marker for the victory stats panel
+#[derive(Component)]
+pub struct VictoryStatsPanel;
+
+/// Marker for the victory time text
+#[derive(Component)]
+pub struct VictoryTimeText;
+
+/// Marker for the victory reward text
+#[derive(Component)]
+pub struct VictoryRewardText;
+
+/// Marker for the "Press SPACE to continue" text
+#[derive(Component)]
+pub struct VictoryContinueText;
+
+// ============================================================================
+// Post-Battle Defeat Outro
+// ============================================================================
+
+/// Resource tracking the defeat outro sequence
+#[derive(Resource, Debug)]
+pub struct DefeatOutro {
+    /// Total elapsed time since outro started
+    pub elapsed: f32,
+    /// Current phase of the outro
+    pub phase: DefeatPhase,
+    /// Battle time in seconds
+    pub battle_time: f32,
+    /// Whether player has pressed confirm to continue
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DefeatPhase {
+    HitStop,     // 0.0 - 0.3s: Brief freeze on death
+    GameOver,    // 0.3 - 0.8s: "GAME OVER" banner appears
+    Stats,       // 0.8 - 1.5s: Stats panel slides in
+    WaitConfirm, // 1.5s+: Wait for player to press confirm
+}
+
+impl DefeatOutro {
+    pub fn new(battle_time: f32) -> Self {
+        Self {
+            elapsed: 0.0,
+            phase: DefeatPhase::HitStop,
+            battle_time,
+            confirmed: false,
+        }
+    }
+
+    pub fn is_done(&self) -> bool {
+        self.confirmed
+    }
+}
+
+/// Marker for the defeat "GAME OVER" text
+#[derive(Component)]
+pub struct DefeatGameOverText;
+
+/// Marker for the defeat stats panel
+#[derive(Component)]
+pub struct DefeatStatsPanel;
+
+/// Marker for the defeat time text
+#[derive(Component)]
+pub struct DefeatTimeText;
+
+/// Marker for the defeat "no reward" text
+#[derive(Component)]
+pub struct DefeatNoRewardText;
+
+/// Marker for the defeat "Press SPACE to continue" text
+#[derive(Component)]
+pub struct DefeatContinueText;
+
+// ============================================================================
 // Arena Configuration
 // ============================================================================
 
@@ -180,8 +303,17 @@ pub struct Enemy;
 pub struct Bullet;
 
 /// Marker for enemy bullets (travel left instead of right)
+/// Contains the damage value from the attack behavior
 #[derive(Component)]
-pub struct EnemyBullet;
+pub struct EnemyBullet {
+    pub damage: i32,
+}
+
+impl EnemyBullet {
+    pub fn new(damage: i32) -> Self {
+        Self { damage }
+    }
+}
 
 /// Marker for projectiles that have hit (in impact/finish animation)
 #[derive(Component)]

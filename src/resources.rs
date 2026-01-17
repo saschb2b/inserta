@@ -154,6 +154,22 @@ pub enum WaveState {
     Cleared,
 }
 
+/// Tracks elapsed battle time (for victory screen stats)
+#[derive(Resource, Debug, Default)]
+pub struct BattleTimer {
+    pub elapsed: f32,
+}
+
+impl BattleTimer {
+    pub fn reset(&mut self) {
+        self.elapsed = 0.0;
+    }
+
+    pub fn tick(&mut self, delta: f32) {
+        self.elapsed += delta;
+    }
+}
+
 // ============================================================================
 // Campaign Resources
 // ============================================================================
