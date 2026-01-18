@@ -335,6 +335,8 @@ pub fn setup_growth_tree(
 }
 
 pub fn update_growth_tree(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     mut node_query: Query<
         (
             &Interaction,
@@ -381,6 +383,17 @@ pub fn update_growth_tree(
     mut tree_state: ResMut<GrowthTreeState>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
+    // Handle back to menu via keyboard/gamepad
+    let mut back = keyboard.just_pressed(KeyCode::Escape);
+    for gamepad in gamepads.iter() {
+        if gamepad.just_pressed(GamepadButton::East) {
+            back = true;
+        }
+    }
+    if back {
+        next_state.set(GameState::MainMenu);
+        return;
+    }
     // 1. Handle Back to Menu Button
     // check for single_mut safely
     if let Some((interaction, mut bg, mut border)) = battle_btn_query.iter_mut().next() {

@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
-use crate::actions::ActionId;
 use crate::components::{ArenaConfig, CleanupOnStateExit, FighterConfig, GameState};
-use crate::resources::{CampaignProgress, SelectedBattle, get_all_arcs};
+use crate::resources::{CampaignProgress, PlayerLoadout, SelectedBattle, get_all_arcs};
 
 // ============================================================================
 // Campaign UI Components
@@ -268,6 +267,7 @@ pub fn update_campaign(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut cursor: ResMut<CampaignCursor>,
     campaign_progress: Res<CampaignProgress>,
+    player_loadout: Res<PlayerLoadout>,
     mut commands: Commands,
     mut next_state: ResMut<NextState<GameState>>,
     mut battle_squares: Query<(
@@ -401,13 +401,13 @@ pub fn update_campaign(
                 battle: battle_to_start,
             });
 
-            // Create arena config from battle definition
+            // Create arena config from battle definition using player's loadout
             let config = ArenaConfig {
                 fighter: FighterConfig {
                     start_x: 1,
                     start_y: 1,
                     max_hp: 100,
-                    actions: vec![ActionId::Recov50, ActionId::Shield, ActionId::WideSwrd],
+                    actions: player_loadout.equipped_actions(),
                 },
                 enemies: battle.enemies.clone(),
             };

@@ -68,6 +68,9 @@ Refs:
   - `animation.rs`: Player sprite-sheet animation
   - `actions.rs`: Legacy action systems (deprecated, use actions/ instead)
   - `action_ui.rs`: Action bar UI at bottom of screen
+  - `loadout.rs`: Loadout menu for equipping actions to slots
+  - `menu.rs`: Main menu with Campaign, Loadout, Shop buttons
+  - `campaign.rs`: Battle selection screen
 - `src/actions/` **NEW - Composable Action/Chip System**
   - `mod.rs`: ActionsPlugin registration
   - `components.rs`: ActionId, ActionSlot, Element, Rarity, ActiveShield
@@ -392,6 +395,50 @@ See `src/actions/blueprints.rs` for the full list including:
 - **Waves**: ShokWave, SoniWave, DynaWave
 - **Towers**: FireTowr, AquaTowr, WoodTowr
 - And many more...
+
+## Loadout System
+The Loadout menu allows players to customize their action loadout before battles.
+
+### Accessing Loadout
+- Main Menu → "Loadout" button
+- Opens a full-screen loadout editor
+
+### UI Structure
+- **Left Panel**: 4 action slots showing equipped actions
+  - Slot number [1-4]
+  - Action icon (colored square)
+  - Action name or "Empty"
+- **Right Panel**: Details about selected slot
+  - Action name with rarity stars
+  - Element type (Fire, Aqua, Elec, Wood, None)
+  - Description
+  - Cooldown and charge time stats
+- **Inventory Browser**: Modal overlay for selecting new actions
+  - "Clear Slot" option at top
+  - All available actions listed
+  - Equipped actions shown grayed out (no duplicates)
+
+### Controls
+| Input | Action |
+|-------|--------|
+| Arrow Keys / D-Pad | Navigate slots or inventory |
+| Enter / A button | Open inventory / Select action |
+| Esc / B button | Close inventory / Return to menu |
+| 1-4 keys | Quick select slot |
+
+### PlayerLoadout Resource
+The `PlayerLoadout` resource persists across game sessions:
+```rust
+pub struct PlayerLoadout {
+    pub slots: [Option<ActionId>; 4],
+}
+```
+
+Default loadout: Recov50, Shield, WideSwrd, Empty
+
+### Integration with Campaign
+When starting a battle from Campaign, the `PlayerLoadout.equipped_actions()` 
+is used to populate the `FighterConfig.actions` field.
 
 ## Rendering rules
 - Use `tile_floor_world(x,y)` for positioning sprites that stand on panels (feet snapping).

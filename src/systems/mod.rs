@@ -8,6 +8,7 @@ pub mod common;
 pub mod grid_utils;
 pub mod growth;
 pub mod intro;
+pub mod loadout;
 pub mod menu;
 pub mod outro;
 pub mod player;

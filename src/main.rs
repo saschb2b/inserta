@@ -20,8 +20,8 @@ use components::{GameState, InputCooldown};
 use constants::MOVE_COOLDOWN;
 use enemies::EnemyPlugin;
 use resources::{
-    BattleTimer, CampaignProgress, GameProgress, PlayerCurrency, PlayerUpgrades, SelectedBattle,
-    WaveState,
+    BattleTimer, CampaignProgress, GameProgress, PlayerCurrency, PlayerLoadout, PlayerUpgrades,
+    SelectedBattle, WaveState,
 };
 use systems::{
     action_ui::update_action_bar_ui,
@@ -35,6 +35,11 @@ use systems::{
     common::update_transforms,
     growth::{GrowthTreeState, cleanup_growth, setup_growth_tree, update_growth_tree},
     intro::{cleanup_intro, intro_complete, setup_intro, update_intro},
+    loadout::{
+        cleanup_loadout, handle_inventory_selection, setup_loadout, update_details_panel,
+        update_inventory_details, update_inventory_visuals, update_loadout_input,
+        update_slot_visuals,
+    },
     menu::{cleanup_menu, handle_menu_selection, setup_menu, update_menu_visuals},
     outro::{
         check_defeat_outro_complete, check_outro_complete, cleanup_outro, defeat_outro_active,
@@ -43,8 +48,8 @@ use systems::{
     },
     player::move_player,
     setup::{
-        cleanup_arena, cleanup_campaign_entities, cleanup_menu_entities, cleanup_splash_entities,
-        setup_action_bar, setup_arena, setup_global, spawn_player_actions,
+        cleanup_arena, cleanup_campaign_entities, cleanup_loadout_entities, cleanup_menu_entities,
+        cleanup_splash_entities, setup_action_bar, setup_arena, setup_global, spawn_player_actions,
     },
     splash::{animate_splash, cleanup_splash, setup_splash, update_splash},
 };
@@ -77,6 +82,7 @@ fn main() {
         .init_resource::<GrowthTreeState>()
         .init_resource::<CampaignProgress>()
         .init_resource::<SelectedBattle>()
+        .init_resource::<PlayerLoadout>()
         // Weapon system plugin
         .add_plugins(WeaponPlugin)
         // Action/chip system plugin
@@ -124,6 +130,27 @@ fn main() {
         .add_systems(
             OnExit(GameState::Campaign),
             (cleanup_campaign, cleanup_campaign_entities),
+        )
+        // ====================================================================
+        // Loadout Menu
+        // ====================================================================
+        .add_systems(OnEnter(GameState::Loadout), setup_loadout)
+        .add_systems(
+            Update,
+            (
+                update_loadout_input,
+                handle_inventory_selection,
+                update_slot_visuals,
+                update_details_panel,
+                update_inventory_visuals,
+                update_inventory_details,
+            )
+                .chain()
+                .run_if(in_state(GameState::Loadout)),
+        )
+        .add_systems(
+            OnExit(GameState::Loadout),
+            (cleanup_loadout, cleanup_loadout_entities),
         )
         // ====================================================================
         // Shop / Growth Tree

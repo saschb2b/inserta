@@ -538,3 +538,15 @@ pub fn cleanup_campaign_entities(
         }
     }
 }
+
+/// Cleanup for when leaving Loadout state
+pub fn cleanup_loadout_entities(
+    mut commands: Commands,
+    query: Query<(Entity, &CleanupOnStateExit)>,
+) {
+    for (entity, scoped) in &query {
+        if scoped.0 == GameState::Loadout {
+            commands.entity(entity).despawn();
+        }
+    }
+}

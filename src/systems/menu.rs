@@ -13,8 +13,9 @@ pub struct MenuButtonAction(pub MenuAction);
 /// Available menu actions
 #[derive(Clone, Debug, Copy)]
 pub enum MenuAction {
-    Shop,
     Campaign,
+    Loadout,
+    Shop,
 }
 
 /// Setup the main menu using Bevy UI
@@ -67,7 +68,7 @@ pub fn setup_menu(mut commands: Commands) {
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         border: UiRect::all(Val::Px(2.0)),
-                        margin: UiRect::bottom(Val::Px(20.0)),
+                        margin: UiRect::bottom(Val::Px(15.0)),
                         ..default()
                     },
                     BorderColor::all(Color::WHITE),
@@ -77,6 +78,31 @@ pub fn setup_menu(mut commands: Commands) {
                 .with_children(|parent| {
                     parent.spawn((
                         Text::new("Campaign"),
+                        TextFont::from_font_size(30.0),
+                        TextColor(Color::WHITE),
+                    ));
+                });
+
+            // Loadout Button
+            parent
+                .spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(300.0),
+                        height: Val::Px(65.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        border: UiRect::all(Val::Px(2.0)),
+                        margin: UiRect::bottom(Val::Px(15.0)),
+                        ..default()
+                    },
+                    BorderColor::all(Color::WHITE),
+                    BackgroundColor(Color::srgb(0.4, 0.5, 0.6)),
+                    MenuButtonAction(MenuAction::Loadout),
+                ))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Text::new("Loadout"),
                         TextFont::from_font_size(30.0),
                         TextColor(Color::WHITE),
                     ));
@@ -132,6 +158,9 @@ pub fn handle_menu_selection(
             match action.0 {
                 MenuAction::Campaign => {
                     next_state.set(GameState::Campaign);
+                }
+                MenuAction::Loadout => {
+                    next_state.set(GameState::Loadout);
                 }
                 MenuAction::Shop => {
                     next_state.set(GameState::Shop);

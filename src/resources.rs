@@ -171,6 +171,64 @@ impl BattleTimer {
 }
 
 // ============================================================================
+// Player Loadout Resource
+// ============================================================================
+
+use crate::actions::ActionId;
+
+/// Persistent player loadout - which actions are equipped
+#[derive(Resource, Debug, Clone)]
+pub struct PlayerLoadout {
+    /// 4 action slots (Some = equipped, None = empty)
+    pub slots: [Option<ActionId>; 4],
+}
+
+impl Default for PlayerLoadout {
+    fn default() -> Self {
+        Self {
+            slots: [
+                Some(ActionId::Recov50),
+                Some(ActionId::Shield),
+                Some(ActionId::WideSwrd),
+                None, // 4th slot starts empty
+            ],
+        }
+    }
+}
+
+impl PlayerLoadout {
+    /// Get list of equipped actions (for FighterConfig)
+    pub fn equipped_actions(&self) -> Vec<ActionId> {
+        self.slots.iter().filter_map(|s| *s).collect()
+    }
+
+    /// Check if an action is already equipped
+    pub fn is_equipped(&self, action_id: ActionId) -> bool {
+        self.slots.iter().any(|s| *s == Some(action_id))
+    }
+
+    /// Equip an action to a slot (returns false if already equipped elsewhere)
+    pub fn equip(&mut self, slot: usize, action_id: ActionId) -> bool {
+        if slot >= 4 {
+            return false;
+        }
+        // Check if already equipped in another slot
+        if self.is_equipped(action_id) {
+            return false;
+        }
+        self.slots[slot] = Some(action_id);
+        true
+    }
+
+    /// Clear a slot
+    pub fn clear_slot(&mut self, slot: usize) {
+        if slot < 4 {
+            self.slots[slot] = None;
+        }
+    }
+}
+
+// ============================================================================
 // Campaign Resources
 // ============================================================================
 

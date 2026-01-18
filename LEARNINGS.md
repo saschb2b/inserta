@@ -1068,6 +1068,54 @@ Refs:
 
 ---
 
+### DEC-012: Loadout menu for action equipment
+Status: accepted
+
+Summary: Create a loadout menu where players can equip actions to 4 slots before battle,
+with full keyboard/gamepad navigation and inventory browsing.
+
+Context:
+- Actions were hardcoded in FighterConfig with no way to customize.
+- Players should be able to choose which Battle Chips to bring into combat.
+- MMBN games have a folder system for chip selection.
+
+Decision:
+- Add `GameState::Loadout` for the loadout menu screen.
+- Create `PlayerLoadout` resource with 4 slots (Option<ActionId>).
+- Implement keyboard/gamepad navigation with visual feedback.
+- Inventory browser shows all 60+ available actions.
+- Actions can only be equipped once (no duplicates).
+- Campaign system reads from PlayerLoadout to configure battles.
+
+UI Structure:
+- Left panel: 4 action slots with icons and names
+- Right panel: Details about selected slot/action
+- Modal overlay: Inventory browser when selecting new action
+
+Controls:
+- Arrow Keys/D-Pad: Navigate slots or inventory
+- Enter/A: Open inventory or select action
+- Esc/B: Close inventory or return to menu
+- Number keys 1-4: Quick select slot
+
+Alternatives:
+- In-battle chip selection: More complex, different from current design.
+- Deck builder: Overkill for 4 slots.
+- Random loadout: Less player agency.
+
+Consequences:
+- Players have full control over battle loadout.
+- Persists across game sessions (via resource).
+- Easy to extend to shop purchases (unlock actions).
+- Default loadout: Recov50, Shield, WideSwrd, Empty.
+
+Refs:
+- src/systems/loadout.rs
+- src/resources.rs:PlayerLoadout
+- src/systems/campaign.rs (uses PlayerLoadout)
+
+---
+
 ## References
 
 - [Bevy ECS Book](https://bevy.org/learn/book/ecs/) - Core ECS concepts
