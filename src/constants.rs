@@ -181,7 +181,7 @@ pub const SHIELD_DURATION: f32 = 2.0; // Duration of invulnerability
 // WideSword action
 pub const WIDESWORD_COOLDOWN: f32 = 4.0; // Cooldown after use
 pub const WIDESWORD_CHARGE_TIME: f32 = 0.3; // Quick charge for melee
-pub const WIDESWORD_DAMAGE: i32 = 40; // High damage melee attack
+pub const WIDESWORD_DAMAGE: i32 = 20; // High damage melee attack
 pub const WIDESWORD_SLASH_DURATION: f32 = 0.25; // Visual slash duration
 
 // Action Bar UI
