@@ -1,12 +1,12 @@
 use bevy::image::TextureAtlas;
 use bevy::prelude::*;
 
+use crate::actions::HealFlash;
 use crate::assets::FighterSprites;
 use crate::components::{
     Enemy, FighterAnim, FighterAnimState, FlashTimer, Player, SlimeAnim, SlimeAnimState,
 };
 use crate::enemies::ChargingTelegraph;
-use crate::systems::actions::HealFlashTimer;
 
 fn movement_pressed(keys: &ButtonInput<KeyCode>) -> bool {
     keys.pressed(KeyCode::KeyW)
@@ -47,7 +47,7 @@ pub fn animate_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     sprites: Option<Res<FighterSprites>>,
-    mut query: Query<(&mut Sprite, &mut FighterAnim), (With<Player>, Without<HealFlashTimer>)>,
+    mut query: Query<(&mut Sprite, &mut FighterAnim), (With<Player>, Without<HealFlash>)>,
 ) {
     let Some(sprites) = sprites else {
         return;

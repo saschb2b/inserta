@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
-use crate::components::{ActionChargeBar, ActionCooldownOverlay, ActionSlot, ActionState};
+use crate::actions::{ActionSlot, ActionState};
+use crate::components::{ActionChargeBar, ActionCooldownOverlay};
 use crate::constants::*;
 use crate::systems::setup::ActionReadyIndicator;
 

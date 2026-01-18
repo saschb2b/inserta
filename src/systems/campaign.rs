@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
-use crate::components::{ActionType, ArenaConfig, CleanupOnStateExit, FighterConfig, GameState};
+use crate::actions::ActionId;
+use crate::components::{ArenaConfig, CleanupOnStateExit, FighterConfig, GameState};
 use crate::resources::{CampaignProgress, SelectedBattle, get_all_arcs};
 
 // ============================================================================
@@ -406,7 +407,7 @@ pub fn update_campaign(
                     start_x: 1,
                     start_y: 1,
                     max_hp: 100,
-                    actions: vec![ActionType::Heal, ActionType::Shield, ActionType::WideSword],
+                    actions: vec![ActionId::Recov50, ActionId::Shield, ActionId::WideSwrd],
                 },
                 enemies: battle.enemies.clone(),
             };

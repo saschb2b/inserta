@@ -898,9 +898,181 @@ Refs:
 
 ---
 
+### DEC-011: Composable action system via blueprints (MMBN Battle Chips)
+Status: accepted
+
+Summary: Create a blueprint-based action/chip system mirroring the enemy system, where
+actions are defined by combining targeting, effects, and visuals.
+
+Context:
+- Original action system had hardcoded ActionType enum with 3 variants.
+- Adding new actions required touching 5+ files (components, constants, actions, setup, UI).
+- MMBN has 175+ Battle Chips with varied effects - needed scalable architecture.
+- Wanted "LEGO-like" action creation matching the enemy blueprint pattern.
+
+Decision:
+- Create `src/actions/` module with same structure as `src/enemies/`.
+- Define `ActionId` enum for all action types (expandable like EnemyId).
+- Create `ActionBlueprint` combining:
+  - Stats: cooldown, charge_time, element, rarity
+  - Targeting: `ActionTarget` enum (OnSelf, Column, Row, Pattern, Projectile, etc.)
+  - Effects: `ActionEffect` enum (Damage, Heal, Shield, Invisibility, etc.)
+  - Modifiers: `ActionModifiers` struct (guard_break, element bonuses, etc.)
+  - Visuals: `ActionVisuals` for icon and effect colors/sprites
+- `ActionBlueprint::get(id)` returns complete definition.
+- `ActionsPlugin` handles input, execution, and effect processing.
+
+Alternatives:
+- Keep hardcoded ActionType: Not scalable for 100+ actions.
+- External data files (JSON/RON): More flexible but requires asset pipeline.
+- Trait-based polymorphism: Harder to serialize and debug.
+
+Consequences:
+- Adding action = add enum variant + blueprint function + match arm.
+- All action data visible in blueprints.rs.
+- Type-safe, compile-time checked.
+- Element system enables weakness bonuses.
+- FighterConfig now uses Vec<ActionId> instead of Vec<ActionType>.
+- Old ActionType deprecated but kept for backwards compatibility.
+
+Refs:
+- src/actions/mod.rs
+- src/actions/blueprints.rs
+- src/actions/behaviors.rs (ActionTarget, ActionEffect, ActionModifiers)
+- src/actions/components.rs (ActionId, ActionSlot, Element, Rarity)
+- src/actions/systems.rs (execution logic)
+
+---
+
+### INT-007: ActionBlueprint
+Summary: Complete template for defining an action/chip.
+
+```rust
+pub struct ActionBlueprint {
+    pub id: ActionId,
+    pub name: &'static str,
+    pub description: &'static str,
+    pub element: Element,
+    pub rarity: Rarity,
+    pub cooldown: f32,
+    pub charge_time: f32,
+    pub target: ActionTarget,
+    pub effect: ActionEffect,
+    pub modifiers: ActionModifiers,
+    pub visuals: ActionVisuals,
+}
+
+impl ActionBlueprint {
+    pub fn get(id: ActionId) -> Self;
+    pub fn display_name(&self) -> String;  // "Recov50 *"
+}
+```
+
+Invariants:
+- Every `ActionId` variant must have a corresponding blueprint function.
+- `get()` must be exhaustive over all `ActionId` variants.
+- `cooldown` is in seconds, must be > 0.
+- `charge_time` can be 0 for instant actions.
+
+Refs:
+- src/actions/blueprints.rs
+
+---
+
+### INT-008: ActionTarget
+Summary: Enum defining how an action selects its targets.
+
+```rust
+pub enum ActionTarget {
+    OnSelf,
+    SingleTile { range: i32 },
+    Column { x_offset: i32 },
+    Row { x_offset: i32, traveling: bool },
+    Pattern { tiles: Vec<(i32, i32)> },
+    Projectile { x_offset: i32, piercing: bool },
+    ProjectileSpread { x_offset: i32, spread_rows: Vec<i32> },
+    AreaAroundSelf { radius: i32 },
+    AreaAtPosition { x_offset: i32, y_offset: i32, pattern: Vec<(i32, i32)> },
+    EnemyArea,
+    RandomEnemy { count: i32 },
+}
+```
+
+Invariants:
+- Offsets are relative to player position (positive = toward enemy).
+- Pattern tiles are relative to action center.
+- Tiles outside grid boundaries are filtered out.
+
+Refs:
+- src/actions/behaviors.rs:ActionTarget
+
+---
+
+### GCH-006: Legacy action components replaced by new system
+Status: resolved
+
+Summary: Old action components (Shield, WideSwordSlash, ChargedShot, HealFlashTimer)
+were superseded by new actions module components but systems remained in main.rs.
+
+Details:
+- New actions module introduced: ActiveShield, DamageZone, HealFlash
+- WeaponPlugin uses Projectile { is_charged: true } instead of ChargedShot
+- Legacy systems in src/systems/actions.rs were never called but still imported
+- Animation.rs referenced HealFlashTimer for query filters
+
+Resolution:
+- Removed legacy system imports from main.rs (heal_flash_effect, update_shield, etc.)
+- Removed legacy system registrations from main.rs scheduling
+- Updated animation.rs to use HealFlash from actions module
+- Gutted src/systems/actions.rs to stub file with migration notes
+- File kept for reference; can be deleted once stable
+
+Refs:
+- src/main.rs:26-30 (removed imports)
+- src/main.rs:195-207, 216 (removed system registrations)
+- src/systems/animation.rs:9 (updated import)
+- src/systems/actions.rs (now stub file)
+
+---
+
+### INT-009: ActionEffect
+Summary: Enum defining what an action does to targets.
+
+```rust
+pub enum ActionEffect {
+    Damage { amount: i32, element: Element, can_crit: bool, guard_break: bool },
+    Heal { amount: i32 },
+    Shield { duration: f32, threshold: Option<i32> },
+    Invisibility { duration: f32 },
+    StealPanel { columns: i32 },
+    CrackPanel { crack_only: bool },
+    RepairPanel,
+    Knockback { distance: i32 },
+    Stun { duration: f32 },
+    Drain { amount: i32 },
+    MultiHit { damage_per_hit: i32, hit_count: i32, element: Element },
+    Delayed { delay: f32, effect: Box<ActionEffect> },
+    Combo { effects: Vec<ActionEffect> },
+}
+```
+
+Invariants:
+- Shield threshold = None means blocks all damage.
+- Shield threshold = Some(0) means barrier (breaks after 1 hit).
+- Shield threshold = Some(n) means aura (blocks damage < n).
+- Combo effects are executed in order.
+- Delayed effects spawn a pending entity.
+
+Refs:
+- src/actions/behaviors.rs:ActionEffect
+
+---
+
 ## References
 
 - [Bevy ECS Book](https://bevy.org/learn/book/ecs/) - Core ECS concepts
 - [Bevy Error B0001](https://bevy.org/learn/errors/b0001) - Query conflict docs
 - [Mega Man Battle Network](https://megaman.fandom.com/wiki/Mega_Man_Battle_Network)
   - Gameplay inspiration for tile-based arena combat
+- [MMBN Battle Chip List](https://megaman.fandom.com/wiki/Battle_Network_1_chip_list)
+  - Reference for chip variety and effects

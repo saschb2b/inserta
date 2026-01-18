@@ -4,12 +4,13 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy::text::Justify;
 
+use crate::actions::{ActionBlueprint, ActionId, ActionSlot};
 use crate::assets::{FighterSprites, ProjectileSprites};
 use crate::components::{
-    ActionBar, ActionChargeBar, ActionCooldownOverlay, ActionKeyText, ActionSlot, ActionSlotUI,
-    ActionType, ArenaConfig, BaseColor, CleanupOnStateExit, Enemy, EnemyConfig, FighterAnim,
-    FighterAnimState, GameState, GridPosition, Health, HealthText, Player, PlayerHealthText,
-    RenderConfig, SlimeAnim, SlimeAnimState,
+    ActionBar, ActionChargeBar, ActionCooldownOverlay, ActionKeyText, ActionSlotUI, ArenaConfig,
+    BaseColor, CleanupOnStateExit, Enemy, EnemyConfig, FighterAnim, FighterAnimState, GameState,
+    GridPosition, Health, HealthText, Player, PlayerHealthText, RenderConfig, SlimeAnim,
+    SlimeAnimState,
 };
 use crate::constants::*;
 use crate::enemies::{
@@ -355,11 +356,11 @@ pub fn setup_action_bar(mut commands: Commands, config: Res<ArenaConfig>) {
     let slot_data: Vec<ActionSlotData> = actions
         .iter()
         .enumerate()
-        .map(|(i, action_type)| ActionSlotData {
+        .map(|(i, action_id)| ActionSlotData {
             slot_index: i,
             x_offset: start_x + (ACTION_SLOT_SIZE + ACTION_SLOT_SPACING) * i as f32,
             key_label: format!("{}", i + 1),
-            icon_color: get_action_icon_color(action_type),
+            icon_color: get_action_icon_color(action_id),
         })
         .collect();
 
@@ -461,13 +462,10 @@ pub fn setup_action_bar(mut commands: Commands, config: Res<ArenaConfig>) {
         });
 }
 
-/// Get the icon color for an action type
-fn get_action_icon_color(action_type: &ActionType) -> Color {
-    match action_type {
-        ActionType::Heal => COLOR_HEAL_ICON,
-        ActionType::Shield => COLOR_SHIELD_ICON,
-        ActionType::WideSword => COLOR_WIDESWORD_ICON,
-    }
+/// Get the icon color for an action (from blueprint)
+fn get_action_icon_color(action_id: &ActionId) -> Color {
+    let blueprint = ActionBlueprint::get(*action_id);
+    blueprint.visuals.icon_color
 }
 
 /// Helper struct to hold action slot spawn data
@@ -486,21 +484,12 @@ pub struct ActionReadyIndicator {
 
 /// Spawn the actual ActionSlot components based on config
 pub fn spawn_player_actions(mut commands: Commands, config: Res<ArenaConfig>) {
-    for (i, action_type) in config.fighter.actions.iter().enumerate() {
-        let (cooldown, charge_time) = get_action_timings(action_type);
+    for (i, action_id) in config.fighter.actions.iter().enumerate() {
+        let blueprint = ActionBlueprint::get(*action_id);
         commands.spawn((
-            ActionSlot::new(i, *action_type, cooldown, charge_time),
+            ActionSlot::new(i, *action_id, blueprint.cooldown, blueprint.charge_time),
             CleanupOnStateExit(GameState::Playing),
         ));
-    }
-}
-
-/// Get cooldown and charge time for an action type
-fn get_action_timings(action_type: &ActionType) -> (f32, f32) {
-    match action_type {
-        ActionType::Heal => (HEAL_COOLDOWN, HEAL_CHARGE_TIME),
-        ActionType::Shield => (SHIELD_COOLDOWN, SHIELD_CHARGE_TIME),
-        ActionType::WideSword => (WIDESWORD_COOLDOWN, WIDESWORD_CHARGE_TIME),
     }
 }
 

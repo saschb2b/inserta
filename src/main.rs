@@ -6,6 +6,7 @@
 
 use bevy::prelude::*;
 
+mod actions;
 mod assets;
 mod components;
 mod constants;
@@ -14,6 +15,7 @@ mod resources;
 mod systems;
 mod weapons;
 
+use actions::ActionsPlugin;
 use components::{GameState, InputCooldown};
 use constants::MOVE_COOLDOWN;
 use enemies::EnemyPlugin;
@@ -23,10 +25,6 @@ use resources::{
 };
 use systems::{
     action_ui::update_action_bar_ui,
-    actions::{
-        action_input, charged_shot_hit_enemy, despawn_widesword_slash, heal_flash_effect,
-        shield_blocks_damage, update_shield, widesword_hit_enemy,
-    },
     animation::{animate_player, animate_slime},
     campaign::{cleanup_campaign, setup_campaign, update_campaign},
     combat::{
@@ -81,6 +79,8 @@ fn main() {
         .init_resource::<SelectedBattle>()
         // Weapon system plugin
         .add_plugins(WeaponPlugin)
+        // Action/chip system plugin
+        .add_plugins(ActionsPlugin)
         // Enemy behavior system plugin
         .add_plugins(EnemyPlugin)
         // State management
@@ -155,12 +155,12 @@ fn main() {
                 .run_if(outro_not_active),
         )
         // Player input systems (only run after intro complete and not during outro)
+        // NOTE: Action input is now handled by ActionsPlugin
         .add_systems(
             Update,
             (
                 // Player systems
                 move_player,
-                action_input,
                 // Animation
                 animate_player,
             )
@@ -188,19 +188,12 @@ fn main() {
                 // Combat
                 bullet_movement,
                 enemy_bullet_movement,
-                charged_shot_hit_enemy,
                 enemy_bullet_hit_player,
                 tile_attack_highlight,
                 // Game Loop
                 update_wave_state,
                 check_victory_condition,
                 check_defeat_condition,
-                // Shield systems (run before damage)
-                update_shield,
-                shield_blocks_damage,
-                // WideSword systems
-                widesword_hit_enemy,
-                despawn_widesword_slash,
             )
                 .run_if(in_state(GameState::Playing))
                 .run_if(outro_not_active),
@@ -209,7 +202,6 @@ fn main() {
             Update,
             (
                 // Other effects
-                heal_flash_effect,
                 muzzle_lifetime,
                 // UI
                 update_action_bar_ui,

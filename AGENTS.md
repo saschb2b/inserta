@@ -66,10 +66,16 @@ Refs:
   - `player.rs`: Movement input (shooting moved to weapon system)
   - `combat.rs`: Bullet movement + tile-based hits
   - `animation.rs`: Player sprite-sheet animation
-  - `actions.rs`: Action system (special abilities with cooldowns)
+  - `actions.rs`: Legacy action systems (deprecated, use actions/ instead)
   - `action_ui.rs`: Action bar UI at bottom of screen
-  - `enemy_ai.rs`: Legacy enemy AI (deprecated, use enemies/ instead)
-- `src/enemies/` **NEW - Composable Enemy System**
+- `src/actions/` **NEW - Composable Action/Chip System**
+  - `mod.rs`: ActionsPlugin registration
+  - `components.rs`: ActionId, ActionSlot, Element, Rarity, ActiveShield
+  - `behaviors.rs`: ActionTarget and ActionEffect enums
+  - `blueprints.rs`: ActionBlueprint definitions (add new actions here!)
+  - `visuals.rs`: ActionVisuals config and color presets
+  - `systems.rs`: Input handling and effect execution
+- `src/enemies/` **Composable Enemy System**
   - `mod.rs`: EnemyPlugin registration
   - `components.rs`: EnemyStats, EnemyMovement, EnemyAttack, EnemyTraitContainer
   - `behaviors.rs`: MovementBehavior and AttackBehavior enums
@@ -260,56 +266,132 @@ ArenaConfig {
 - **Animation**: Still uses legacy `SlimeAnim` component. Full animation generalization is TODO.
 - **Traits**: HP regen and enrage are defined but systems are disabled to avoid query conflicts.
 
-## Action System
-The fighter has 3 action slots. Actions are special abilities separate from the equipped weapon.
+## Action System (Composable Blueprints)
+The fighter has action slots for special abilities (Battle Chips). Actions are defined using a **blueprint system** - combine targeting, effects, and visuals like LEGO blocks.
+
+### Architecture Overview
+```
+ActionBlueprint {
+    id: ActionId,              // Unique identifier
+    name: &str,                // Display name
+    element: Element,          // None, Fire, Aqua, Elec, Wood
+    rarity: Rarity,            // Common to UltraRare (* to *****)
+    cooldown: f32,             // Seconds after use
+    charge_time: f32,          // 0.0 = instant
+    target: ActionTarget,      // How it selects targets
+    effect: ActionEffect,      // What it does
+    modifiers: ActionModifiers,// Optional modifiers
+    visuals: ActionVisuals,    // Icon and effect colors
+}
+```
+
+### Adding a New Action (Step by Step)
+
+**Step 1: Add to `ActionId` enum** (`src/actions/components.rs`)
+```rust
+pub enum ActionId {
+    Recov50,
+    Shield,
+    WideSwrd,
+    MyNewChip,  // <- Add your new action here
+}
+```
+
+**Step 2: Create blueprint function** (`src/actions/blueprints.rs`)
+```rust
+fn my_new_chip() -> ActionBlueprint {
+    ActionBlueprint {
+        id: ActionId::MyNewChip,
+        name: "MyNewChip",
+        description: "Does something cool!",
+        element: Element::Fire,
+        rarity: Rarity::Rare,
+        cooldown: 5.0,
+        charge_time: 0.3,
+        target: ActionTarget::Column { x_offset: 1 },
+        effect: ActionEffect::elemental_damage(100, Element::Fire),
+        modifiers: ActionModifiers::default(),
+        visuals: ActionVisuals::sword_slash(colors::FIRE, colors::FIRE),
+    }
+}
+```
+
+**Step 3: Register in `ActionBlueprint::get()`** (`src/actions/blueprints.rs`)
+```rust
+pub fn get(id: ActionId) -> Self {
+    match id {
+        ActionId::MyNewChip => my_new_chip(),  // <- Add match arm
+        // ...
+    }
+}
+```
+
+### Available Targeting Types
+| Target | Description |
+|--------|-------------|
+| `OnSelf` | Affects the user (heals, buffs) |
+| `SingleTile { range }` | Single tile in front |
+| `Column { x_offset }` | Entire column (WideSword) |
+| `Row { x_offset, traveling }` | Entire row (shockwave) |
+| `Pattern { tiles }` | Specific tile pattern (LongSword) |
+| `Projectile { x_offset, piercing }` | Traveling projectile |
+| `ProjectileSpread { ..., spread_rows }` | Multiple row projectile |
+| `AreaAroundSelf { radius }` | Area around user |
+| `AreaAtPosition { x_offset, y_offset, pattern }` | Area at target |
+| `EnemyArea` | All enemy tiles |
+| `RandomEnemy { count }` | Random enemy tiles |
+
+### Available Effect Types
+| Effect | Description |
+|--------|-------------|
+| `Damage { amount, element, can_crit, guard_break }` | Deal damage |
+| `Heal { amount }` | Restore HP |
+| `Shield { duration, threshold }` | Block damage |
+| `Invisibility { duration }` | Complete invincibility |
+| `StealPanel { columns }` | Steal enemy panels |
+| `CrackPanel { crack_only }` | Crack or destroy panels |
+| `RepairPanel` | Fix broken panels |
+| `Knockback { distance }` | Push targets back |
+| `Stun { duration }` | Freeze targets |
+| `Drain { amount }` | Steal HP from target |
+| `MultiHit { damage_per_hit, hit_count, element }` | Multiple hits |
+| `Delayed { delay, effect }` | Bomb-style delayed effect |
+| `Combo { effects }` | Multiple effects combined |
+
+### Current Default Actions
+| Key | Action | Description |
+|-----|--------|-------------|
+| `1` | Recov50 | Instant heal 50 HP (5s cooldown) |
+| `2` | Shield | Block all damage 2s (6s cooldown) |
+| `3` | WideSwrd | Column attack 80 dmg (4s cooldown, 0.3s charge) |
 
 ### Key bindings
-| Slot | Keyboard | Gamepad (planned) | Action |
-|------|----------|-------------------|--------|
-| 1    | `1`      | A                 | Heal |
-| 2    | `2`      | B                 | Shield |
-| 3    | `3`      | X                 | WideSword |
-
-### Current actions
-1. **Heal** (Slot 1, Key `1`)
-   - Instant cast (no charge time)
-   - Restores 20 HP (capped at max HP)
-   - 8 second cooldown (longer to prevent spam)
-   - Visual: Green flash on player
-
-2. **Shield** (Slot 2, Key `2`)
-   - Instant activation (no charge time)
-   - Blocks all incoming damage for 2 seconds
-   - 6 second cooldown after shield expires
-   - Visual: Blue semi-transparent shield around player
-
-3. **WideSword** (Slot 3, Key `3`)
-   - Quick charge time (0.3s)
-   - Melee attack hitting the entire column in front of player (all 3 rows)
-   - Deals high damage (40 HP)
-   - 4 second cooldown after use
-   - Visual: Pink vertical slash effect
-
-### Action states
-- `Ready`: Action can be triggered
-- `Charging`: Action is charging up (for charged abilities)
-- `OnCooldown`: Action was used, waiting for cooldown
+| Slot | Keyboard | Gamepad |
+|------|----------|---------|
+| 1    | `1`      | West (X) |
+| 2    | `2`      | North (Y) |
+| 3    | `3`      | East (B) |
+| 4    | `4`      | South (A) |
 
 ### Action bar UI
-- Located at bottom center of screen (`ACTION_BAR_Y = -340`)
+- Located at bottom center of screen
 - Each slot shows:
-  - Icon (colored square representing the action)
+  - Icon (colored based on blueprint)
   - Key binding label below
   - Green dot indicator when ready
-  - Dark overlay showing cooldown progress (sweeps down as cooldown finishes)
+  - Dark overlay showing cooldown progress
   - Yellow charge bar during charging
 
-### Adding new actions
-1. Add new variant to `ActionType` enum in `components.rs`
-2. Add constants in `constants.rs` (cooldown, charge time, damage/effect, colors)
-3. Handle the action in `execute_action()` in `actions.rs`
-4. Add UI slot in `setup_action_bar()` in `action_ui.rs`
-5. Spawn the `ActionSlot` in `spawn_player_actions()`
+### Available MMBN-Style Actions (70+ defined)
+See `src/actions/blueprints.rs` for the full list including:
+- **Recovery**: Recov10-300
+- **Defense**: Barrier, Shield, MetGuard, Invis1-3, LifeAura
+- **Swords**: Sword, WideSwrd, LongSwrd, FireSwrd, AquaSwrd, ElecSwrd, FtrSwrd, KngtSwrd, HeroSwrd
+- **Cannons**: Cannon, HiCannon, M-Cannon
+- **Bombs**: MiniBomb, LilBomb, CrosBomb, BigBomb
+- **Waves**: ShokWave, SoniWave, DynaWave
+- **Towers**: FireTowr, AquaTowr, WoodTowr
+- And many more...
 
 ## Rendering rules
 - Use `tile_floor_world(x,y)` for positioning sprites that stand on panels (feet snapping).
